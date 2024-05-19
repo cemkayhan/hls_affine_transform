@@ -33,7 +33,8 @@ void D_TOP_
 
 template<typename FP_T_,int MAX_COLS_,int MAX_ROWS_>
 inline static void calcGeoMatrix(
-  FP_T_ Angle,FP_T_ Scale,
+  FP_T_ Angle,
+  FP_T_ Scale,
   ap_uint<Bit_Width<MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Height,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Shift_Y,
@@ -48,17 +49,17 @@ inline static void calcGeoMatrix(
 #pragma HLS ALLOCATION operation instances=hdiv limit=1
 
   const auto Mypi_ {FP_T_ {3.141592653589793238462f}};
-  //const auto Alpha_ {FP_T_ {Scale*cosFunction(FP_T_ {Angle*Mypi_/FP_T_ {180}})}};
-  const auto Alpha_ {FP_T_ {Scale*cosFunction(FP_T_ {Angle*FP_T_ {CV_PI}/FP_T_ {180}})}};
-  //const auto Beta_ {FP_T_ {Scale*sinFunction(FP_T_ {Angle*Mypi_/FP_T_ {180}})}};
-  const auto Beta_ {FP_T_ {Scale*sinFunction(FP_T_ {Angle*FP_T_ {CV_PI}/FP_T_ {180}})}};
+  const auto Alpha_ {FP_T_ {Scale*cosFunction(FP_T_ {Angle*Mypi_/FP_T_ {180}})}};
+  //const auto Alpha_ {FP_T_ {Scale*cosFunction(FP_T_ {Angle*FP_T_ {CV_PI}/FP_T_ {180}})}};
+  const auto Beta_ {FP_T_ {Scale*sinFunction(FP_T_ {Angle*Mypi_/FP_T_ {180}})}};
+  //const auto Beta_ {FP_T_ {Scale*sinFunction(FP_T_ {Angle*FP_T_ {CV_PI}/FP_T_ {180}})}};
 
   Mat[0][0]=Alpha_;
   Mat[0][1]=-Beta_;
-  Mat[0][2]=(ap_uint<1> {1}-Alpha_)*(static_cast<FP_T_>(Width)/2)+Beta_*(static_cast<FP_T_>(Height)/2);
+  Mat[0][2]=(ap_uint<1> {1}-Alpha_)*(static_cast<FP_T_>(Width)/FP_T_ {2})+Beta_*(static_cast<FP_T_>(Height)/FP_T_ {2});
   Mat[1][0]=Beta_;
   Mat[1][1]=Alpha_;
-  Mat[1][2]=(ap_uint<1> {1}-Alpha_)*(static_cast<FP_T_>(Height)/2)-Beta_*(static_cast<FP_T_>(Width)/2);
+  Mat[1][2]=(ap_uint<1> {1}-Alpha_)*(static_cast<FP_T_>(Height)/FP_T_ {2})-Beta_*(static_cast<FP_T_>(Width)/FP_T_ {2});
   Mat[1][2]+=Shift_Y;
 }
 
@@ -73,65 +74,61 @@ inline static void rotateFrame
 ){
 #pragma HLS INLINE
 
-#if 1==D_ENABLE_C_SIMULATION_&&1==D_ENABLE_C_SIMULATION_DEBUG_
-  static std::ofstream ofs {"rotateFrameHls.txt"}; 
-#endif
-
-  loopRows: for(auto Y_= ap_uint<Bit_Width<MAX_ROWS_>::Value> {0};Y_<Height;++Y_){
+  loopRows: for(auto Y_ {ap_uint<Bit_Width<MAX_ROWS_>::Value> {0}};Y_<Height;++Y_){
 #pragma HLS LOOP_TRIPCOUNT min=MAX_ROWS_ max=MAX_ROWS_
 
-    loopCols: for(auto X_=ap_uint<Bit_Width<MAX_COLS_/PPC_>::Value> {0};X_<Width/PPC_;++X_){
+    loopCols: for(auto X_ {ap_uint<Bit_Width<MAX_COLS_/PPC_>::Value> {0}};X_<Width/PPC_;++X_){
 #pragma HLS LOOP_TRIPCOUNT min=MAX_COLS_/PPC_ max=MAX_COLS_/PPC_
 #pragma HLS PIPELINE II=PPC_
 
       FP_T_ Mm2s_X_[PPC_];
       FP_T_ Mm2s_Y_[PPC_];
-      loopCalcXY: for(auto J=0;J<PPC_;++J){
+      loopCalcXY: for(auto J_ {0};J_<PPC_;++J_){
 #pragma HLS UNROLL
-        Mm2s_X_[J]=Mat[0][0]*(X_*PPC_+J)+Mat[0][1]*Y_+Mat[0][2];
-        Mm2s_Y_[J]=Mat[1][0]*(X_*PPC_+J)+Mat[1][1]*Y_+Mat[1][2];
+        Mm2s_X_[J_]=Mat[0][0]*static_cast<FP_T_>(X_*PPC_+J_)+Mat[0][1]*static_cast<FP_T_>(Y_)+Mat[0][2];
+        Mm2s_Y_[J_]=Mat[1][0]*static_cast<FP_T_>(X_*PPC_+J_)+Mat[1][1]*static_cast<FP_T_>(Y_)+Mat[1][2];
       }
 
       ap_uint<2*DEPTH_*PPC_> Mm2s_;
-      loopReadSrc: for(auto J=0;J<PPC_;++J){
+      loopReadSrc: for(auto J_ {0};J_<PPC_;++J_){
 #pragma HLS UNROLL
-        if(Mm2s_X_[J]>=static_cast<FP_T_>(0)&&Mm2s_X_[J]<static_cast<FP_T_>(Width)&&Mm2s_Y_[J]>=static_cast<FP_T_>(0)&&Mm2s_Y_[J]<static_cast<FP_T_>(Height)){
-          const auto Mm2s_Ydec_ {static_cast<ap_uint<Bit_Width<MAX_ROWS_>::Value>>(Mm2s_Y_[J])};
-          const auto Mm2s_Xdec_ {static_cast<ap_uint<Bit_Width<MAX_COLS_>::Value>>(Mm2s_X_[J])};
+        if(Mm2s_X_[J_]>=FP_T_ {0}&&Mm2s_X_[J_]<static_cast<FP_T_>(Width)&&Mm2s_Y_[J_]>=FP_T_ {0}&&Mm2s_Y_[J_]<static_cast<FP_T_>(Height)){
+          const auto Mm2s_Ydec_ {static_cast<ap_uint<Bit_Width<MAX_ROWS_>::Value>>(Mm2s_Y_[J_])};
+          const auto Mm2s_Xdec_ {static_cast<ap_uint<Bit_Width<MAX_COLS_>::Value>>(Mm2s_X_[J_])};
           const auto Mm2s_Xshift_ {Mm2s_Xdec_(Bit_Width<MAX_ROWS_>::Value-1,Bit_Width<PPC_>::Value-1)};
           const auto S2mm_ {S2mm[(MAX_STRIDE_/PPC_)*Mm2s_Ydec_+Mm2s_Xshift_]};
 #if 1==D_PPC_
-          Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*0+2*DEPTH_-1,2*DEPTH_*0);
+          Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*0+2*DEPTH_-1,2*DEPTH_*0);
 #else
           switch(Mm2s_Xdec_(Bit_Width<PPC_>::Value-2,0)){
             case 0:
-              Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*0+2*DEPTH_-1,2*DEPTH_*0);
+              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*0+2*DEPTH_-1,2*DEPTH_*0);
               break;
             case 1:
-              Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*1+2*DEPTH_-1,2*DEPTH_*1);
+              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*1+2*DEPTH_-1,2*DEPTH_*1);
               break;
             case 2:
-              Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*2+2*DEPTH_-1,2*DEPTH_*2);
+              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*2+2*DEPTH_-1,2*DEPTH_*2);
               break;
             case 3:
-              Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*3+2*DEPTH_-1,2*DEPTH_*3);
+              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*3+2*DEPTH_-1,2*DEPTH_*3);
               break;
             case 4:
-              Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*4+2*DEPTH_-1,2*DEPTH_*4);
+              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*4+2*DEPTH_-1,2*DEPTH_*4);
               break;
             case 5:
-              Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*5+2*DEPTH_-1,2*DEPTH_*5);
+              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*5+2*DEPTH_-1,2*DEPTH_*5);
               break;
             case 6:
-              Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*6+2*DEPTH_-1,2*DEPTH_*6);
+              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*6+2*DEPTH_-1,2*DEPTH_*6);
               break;
             case 7:
-              Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=S2mm_(2*DEPTH_*7+2*DEPTH_-1,2*DEPTH_*7);
+              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*7+2*DEPTH_-1,2*DEPTH_*7);
               break;
           }
 #endif
         } else {
-          Mm2s_(2*DEPTH_*J+2*DEPTH_-1,2*DEPTH_*J)=ap_uint<2*DEPTH_> {0x80};
+          Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=ap_uint<2*DEPTH_> {0x80};
         }
       }
 

@@ -6,15 +6,15 @@
 inline static float cosFunction(float Param)
 {
 #pragma HLS INLINE
-  //return hls::cosf(Param);
-  return cos(Param);
+  return hls::cosf(Param);
+  //return cos(Param);
 }
 
 inline static half cosFunction(half Param)
 {
 #pragma HLS INLINE
-  //return hls::half_cos(Param);
-  return cos(Param);
+  return hls::half_cos(Param);
+  //return cos(Param);
 }
 
 #endif

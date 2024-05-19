@@ -7,6 +7,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "geometric_transform.h"
+#include <string>
 
 Geometric_Transform::Geometric_Transform(){
     
@@ -15,6 +16,44 @@ Geometric_Transform::Geometric_Transform(){
 Geometric_Transform::~Geometric_Transform() {
 
 }
+
+// GOLDEN
+cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, double angle, double scale) {
+    double alpha = scale * cos(angle * CV_PI / 180.0);
+    double beta = scale * sin(angle * CV_PI / 180.0);
+
+    cv::Mat rot_mat = cv::Mat::zeros(2, 3, CV_64F); //2x3 matrix oluşturuyoruz
+    rot_mat.at<double>(0, 0) = alpha;
+    rot_mat.at<double>(0, 1) = -beta;
+    rot_mat.at<double>(0, 2) = (1 - alpha) * center.x + beta * center.y;
+    rot_mat.at<double>(1, 0) = beta;
+    rot_mat.at<double>(1, 1) = alpha;
+    rot_mat.at<double>(1, 2) = (1 - alpha) * center.y - beta * center.x;
+
+    return rot_mat;
+}
+
+
+void goldenWarpAffine(const cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize) {
+    dst = cv::Mat::zeros(dsize, src.type());
+    //std::cout << dst;
+    for (int y = 0; y < dsize.height; ++y) {
+        for (int x = 0; x < dsize.width; ++x) {    
+            double srcX = M.at<double>(0, 0) * x + M.at<double>(0, 1) * y + M.at<double>(0, 2);
+            double srcY = M.at<double>(1, 0) * x + M.at<double>(1, 1) * y + M.at<double>(1, 2);
+            if (srcX >= 0 && srcX < src.cols && srcY >= 0 && srcY < src.rows) {
+                dst.at<cv::Vec2b>(y, x) = src.at<cv::Vec2b>(cv::Point(srcX, srcY));
+            } else {
+                dst.at<cv::Vec2b>(y, x) = 0x80;
+            }
+        }
+        
+    }
+    //std::cout << src;
+    //std::cout << dst;
+}
+// GOLDEN
+
 
 cv::Mat Geometric_Transform::getRotationMatrix2D(cv::Point2f center, float angle, float scale) {
     float alpha = scale * cos(angle * float {CV_PI} / 180.0f);
@@ -36,10 +75,6 @@ template<int PPC_>
 void warpAffine(cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize
   ) {
 
-#if 1==D_ENABLE_C_SIMULATION_&&1==D_ENABLE_C_SIMULATION_DEBUG_
-  static std::ofstream ofs {"rotateFrameReference.txt"}; 
-#endif
-
     for (int y = 0; y < dsize.height; ++y) {
         for (int x = 0; x < dsize.width/PPC_; ++x) {    
 
@@ -60,18 +95,6 @@ void warpAffine(cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize
                 srcXY[J] = src.at<cv::Vec2b>(cv::Point(srcX[J], srcY[J]));
 
 
-#if 1==D_ENABLE_C_SIMULATION_&&1==D_ENABLE_C_SIMULATION_DEBUG_
-              cv::Point Pnt=cv::Point(srcX[J], srcY[J]);
-              ofs << "X[" << J << "]: " << std::fixed << std::setprecision(12) << srcX[J] << ", "
-                  << "Y[" << J << "]: " << std::fixed << std::setprecision(12) << srcY[J] << '\n';
-              ofs << "X[" << J << "]: " << Pnt.x << ", "
-                  << "Y[" << J << "]: " << Pnt.y << '\n';
-              ofs << "X[" << J << "]: " << +srcXY[J][1] << ", "
-                  << "Y[" << J << "]: " << +srcXY[J][0] << '\n';
-#endif
-
-
-
               } else {
                 srcXY[J] = 0x80;
               }
@@ -85,7 +108,7 @@ void warpAffine(cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize
     }
 }
 
-int main()
+int testFunction(float angle,int index,double goldenangle)
 {
     cv::Mat imageBgr = cv::imread("/tmp/image.png");
 
@@ -106,12 +129,10 @@ int main()
 
     Geometric_Transform geo;
     cv::Point2f center(imageUyvy.cols / 2.0, imageUyvy.rows / 2.0);
-    float angle = 45.0;
     float scale = 1.0;
 
     // Döndürme matrisi oluştur
     cv::Mat rotMat = geo.getRotationMatrix2D(center, angle, scale);
-
     // Ek kaydırma (y ekseninde 10 piksel)
     rotMat.at<float>(1, 2) += 100;
 
@@ -154,7 +175,8 @@ int main()
 
     cv::Mat imageBgrRotatedx;
     cv::cvtColor(imageUyvyRotated, imageBgrRotatedx, cv::COLOR_YUV2BGR_UYVY);
-    cv::imwrite("imageBgrRotatedx.jpg", imageBgrRotatedx);
+    const std::string imageBgrRotatedxStr {std::to_string(index)+"hls_"+std::to_string(angle)+".jpg"};
+    cv::imwrite(imageBgrRotatedxStr, imageBgrRotatedx);
 
     cv::Mat rotatedImage;
     rotatedImage=cv::Mat(imageUyvy.size(),imageUyvy.type());
@@ -162,11 +184,44 @@ int main()
 
     cv::Mat rotatedImageBgr(imageBgr.size(),CV_8UC3);
     cv::cvtColor(rotatedImage, rotatedImageBgr, cv::COLOR_YUV2BGR_UYVY);
-    cv::imwrite("rotatedImageBgr.jpg", rotatedImageBgr);
+    const std::string rotatedImageBgrStr {std::to_string(index)+"ref_"+std::to_string(angle)+".jpg"};
+    cv::imwrite(rotatedImageBgrStr, rotatedImageBgr);
 
-    cv::Mat imageBgrx;
-    cv::cvtColor(imageUyvy, imageBgrx, cv::COLOR_YUV2BGR_UYVY);
-    cv::imwrite("imageBgrx.jpg", imageBgrx);
-    cv::imwrite("imageBgr.jpg", imageBgr);
 
+    // GOLDEN
+    double goldenscale = 1.0;
+
+    // Döndürme matrisi oluştur
+    cv::Point2f goldencenter(imageUyvy.cols / 2.0, imageUyvy.rows / 2.0);
+    cv::Mat goldenRotMat = goldenGetRotationMatrix2D(goldencenter, goldenangle, goldenscale);
+    // Ek kaydırma (y ekseninde 10 piksel)
+    goldenRotMat.at<double>(1, 2) += 100;
+
+    cv::Mat rotatedImageGolden;
+    rotatedImageGolden=cv::Mat(imageUyvy.size(),imageUyvy.type());
+    goldenWarpAffine(imageUyvy, rotatedImageGolden, goldenRotMat, imageUyvy.size());
+
+    cv::Mat rotatedImageBgrGolden(imageBgr.size(),CV_8UC3);
+    cv::cvtColor(rotatedImageGolden,rotatedImageBgrGolden, cv::COLOR_YUV2BGR_UYVY);
+    const std::string rotatedImageGoldenStr {std::to_string(index)+"golden_"+std::to_string(goldenangle)+".jpg"};
+    cv::imwrite(rotatedImageGoldenStr, rotatedImageBgrGolden);
+
+    // GOLDEN
+
+
+   return 0;
+}
+
+int main()
+{
+  double goldenangle = 1.0;
+  int result;
+  int index=0;
+  for(float angle=1.0; angle<360.0;angle+=1.0){
+    result=testFunction(angle,index,goldenangle);
+    ++index;
+    goldenangle+=1.0;
+  }
+
+  return result;
 }
