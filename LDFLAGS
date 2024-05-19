@@ -1,0 +1,6 @@
+-Wl,-z,stack-size=104857600
+-L/usr/local/opencv4.4.0/lib
+-lopencv_core
+-lopencv_imgproc
+-lopencv_highgui
+-lopencv_imgcodecs
