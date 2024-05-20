@@ -1,6 +1,10 @@
 #ifndef PIFUNCTION_H_INCLUDE_GUARD_
 #define PIFUNCTION_H_INCLUDE_GUARD_
 
+#if 1==D_ENABLE_C_SIMULATION_&&1==D_ENABLE_C_SIMULATION_NONSYNTHESIS_CONSTRUCTS_
+#include <opencv2/core.hpp>
+#endif
+
 template<typename T_>
 inline static T_ Pi_Func()
 {
