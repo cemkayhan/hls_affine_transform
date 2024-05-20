@@ -1,7 +1,7 @@
 #ifndef TYPE_WIDTH_H_INCLUDE_GUARD
 #define TYPE_WIDTH_H_INCLUDE_GUARD
 
-template<typename T>
+template<typename T_>
 struct Type_Width
 {
 };

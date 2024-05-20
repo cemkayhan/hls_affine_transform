@@ -3,15 +3,17 @@
 
 #include "hls_math.h"
 
-inline static float cosFunction(float Param)
-{
+inline static float Cos_Func(
+  float Param
+){
 #pragma HLS INLINE
   return hls::cosf(Param);
   //return cos(Param);
 }
 
-inline static half cosFunction(half Param)
-{
+inline static half Cos_Func(
+  half Param
+){
 #pragma HLS INLINE
   return hls::half_cos(Param);
   //return cos(Param);

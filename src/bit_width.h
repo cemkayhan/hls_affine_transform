@@ -1,4 +1,4 @@
-#if !defined(BIT_WIDTH_H_INCLUDE_GUARD)
+#ifndef BIT_WIDTH_H_INCLUDE_GUARD
 #define BIT_WIDTH_H_INCLUDE_GUARD
 
 template<int N_>

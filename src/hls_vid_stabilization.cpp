@@ -7,8 +7,8 @@ void D_TOP_
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Shift_Y,
-  D_FP_T_ Angle,
-  D_FP_T_ Scale
+  ap_uint<Type_Width<D_FP_T_>::Value> Angle,
+  ap_uint<Type_Width<D_FP_T_>::Value> Scale
 ){
 #pragma HLS INTERFACE m_axi port=S2mm bundle=myaxi depth=(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_
 #pragma HLS INTERFACE m_axi port=Mm2s bundle=myaxi depth=(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_

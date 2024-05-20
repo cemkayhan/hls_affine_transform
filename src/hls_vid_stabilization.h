@@ -6,19 +6,12 @@
 #include "hls_stream.h"
 #include "axi_vid_bus_width.h"
 #include "bit_width.h"
+#include "type_width.h"
 #include "hls_math.h"
 #include "sinfunction.h"
 #include "cosfunction.h"
-
-#if 1==D_ENABLE_C_SIMULATION_
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#if 1==D_ENABLE_C_SIMULATION_DEBUG_
-#include <fstream>
-#endif
-#endif
+#include "fptfunction.h"
+#include "pifunction.h"
 
 void D_TOP_
 (
@@ -27,14 +20,14 @@ void D_TOP_
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Shift_Y,
-  D_FP_T_ Angle,
-  D_FP_T_ Scale
+  ap_uint<Type_Width<D_FP_T_>::Value> Angle,
+  ap_uint<Type_Width<D_FP_T_>::Value> Scale
 );
 
 template<typename FP_T_,int MAX_COLS_,int MAX_ROWS_>
 inline static void calcGeoMatrix(
-  FP_T_ Angle,
-  FP_T_ Scale,
+  ap_uint<Type_Width<FP_T_>::Value> Angle,
+  ap_uint<Type_Width<FP_T_>::Value> Scale,
   ap_uint<Bit_Width<MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Height,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Shift_Y,
@@ -48,11 +41,12 @@ inline static void calcGeoMatrix(
 #pragma HLS ALLOCATION operation instances=hsub limit=1
 #pragma HLS ALLOCATION operation instances=hdiv limit=1
 
-  const auto Mypi_ {FP_T_ {3.141592653589793238462f}};
-  const auto Alpha_ {FP_T_ {Scale*cosFunction(FP_T_ {Angle*Mypi_/FP_T_ {180}})}};
-  //const auto Alpha_ {FP_T_ {Scale*cosFunction(FP_T_ {Angle*FP_T_ {CV_PI}/FP_T_ {180}})}};
-  const auto Beta_ {FP_T_ {Scale*sinFunction(FP_T_ {Angle*Mypi_/FP_T_ {180}})}};
-  //const auto Beta_ {FP_T_ {Scale*sinFunction(FP_T_ {Angle*FP_T_ {CV_PI}/FP_T_ {180}})}};
+  const auto Scale_ {Fpt_Func(Scale)};
+  const auto Angle_ {Fpt_Func(Angle)};
+  const auto Mypi_ {Pi_Func<FP_T_>()};
+
+  const auto Alpha_ {FP_T_ {Scale_*Cos_Func(FP_T_ {Angle_*Mypi_/FP_T_ {180}})}};
+  const auto Beta_ {FP_T_ {Scale_*Sin_Func(FP_T_ {Angle_*Mypi_/FP_T_ {180}})}};
 
   Mat[0][0]=Alpha_;
   Mat[0][1]=-Beta_;

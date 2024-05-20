@@ -108,8 +108,12 @@ void warpAffine(cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize
     }
 }
 
-int testFunction(float angle,int index,double goldenangle)
-{
+int testFunction(
+  ap_uint<Type_Width<D_FP_T_>::Value> Angle,
+  ap_uint<Type_Width<D_FP_T_>::Value> Scale,
+  float angle, float scale,
+  int index,double goldenangle
+) {
     cv::Mat imageBgr = cv::imread("/tmp/image.png");
 
     if(imageBgr.empty()){
@@ -129,7 +133,7 @@ int testFunction(float angle,int index,double goldenangle)
 
     Geometric_Transform geo;
     cv::Point2f center(imageUyvy.cols / 2.0, imageUyvy.rows / 2.0);
-    float scale = 1.0;
+    //float scale = 1.0;
 
     // Döndürme matrisi oluştur
     cv::Mat rotMat = geo.getRotationMatrix2D(center, angle, scale);
@@ -155,8 +159,8 @@ int testFunction(float angle,int index,double goldenangle)
       imageUyvy.cols,
       imageUyvy.rows,
       100,
-      angle,
-      scale
+      Angle,
+      Scale
     );
 
     cv::Mat imageUyvyRotated(imageUyvy.size(), CV_8UC2);
@@ -214,11 +218,15 @@ int testFunction(float angle,int index,double goldenangle)
 
 int main()
 {
-  double goldenangle = 1.0;
+  double goldenangle = 91.0;
   int result;
   int index=0;
-  for(float angle=1.0; angle<360.0;angle+=1.0){
-    result=testFunction(angle,index,goldenangle);
+
+  for(float angle=float(goldenangle); angle<112.0f;angle+=1.0f){
+    float scale=1.0f;
+    fp_struct<D_FP_T_> Angle=fp_struct<D_FP_T_>(D_FP_T_(angle));
+    fp_struct<D_FP_T_> Scale=fp_struct<D_FP_T_>(D_FP_T_(scale));
+    result=testFunction(Angle.data(),Scale.data(),angle,scale,index,goldenangle);
     ++index;
     goldenangle+=1.0;
   }

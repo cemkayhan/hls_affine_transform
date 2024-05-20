@@ -3,15 +3,17 @@
 
 #include "hls_math.h"
 
-inline static float sinFunction(float Param)
-{
+inline static float Sin_Func(
+  float Param
+){
 #pragma HLS INLINE
   return hls::sinf(Param);
   //return sin(Param);
 }
 
-inline static half sinFunction(half Param)
-{
+inline static half Sin_Func(
+  half Param
+){
 #pragma HLS INLINE
   return hls::half_sin(Param);
   //return sin(Param);
