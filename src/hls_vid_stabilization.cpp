@@ -2,8 +2,8 @@
 
 void D_TOP_
 (
-  ap_uint<2*D_DEPTH_*D_PPC_> S2mm[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
-  ap_uint<2*D_DEPTH_*D_PPC_> Mm2s[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
+  ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> S2mm[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
+  ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> Mm2s[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Shift_Y,
@@ -37,7 +37,7 @@ void D_TOP_
   calcGeoMatrix<D_FP_T_,D_MAX_COLS_,D_MAX_ROWS_>(
     Angle_,Scale_,Width_,Height_,Shift_Y_,Mat_
   );
-  rotateFrame<D_FP_T_,D_MAX_STRIDE_,D_MAX_COLS_,D_MAX_ROWS_,D_DEPTH_,D_PPC_>(
+  rotateFrame<D_FP_T_,D_MAX_STRIDE_,D_MAX_COLS_,D_MAX_ROWS_,D_COLOR_CHANNELS_,D_DEPTH_,D_PPC_>(
     S2mm,Mm2s,Width_,Height_,Mat_
   );
 }

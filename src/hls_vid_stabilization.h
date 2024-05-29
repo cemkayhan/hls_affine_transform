@@ -15,8 +15,8 @@
 
 void D_TOP_
 (
-  ap_uint<2*D_DEPTH_*D_PPC_> S2mm[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
-  ap_uint<2*D_DEPTH_*D_PPC_> Mm2s[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
+  ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> S2mm[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
+  ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> Mm2s[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Shift_Y,
@@ -57,11 +57,11 @@ inline static void calcGeoMatrix(
   Mat[1][2]+=Shift_Y;
 }
 
-template<typename FP_T_,int MAX_STRIDE_,int MAX_COLS_,int MAX_ROWS_,int DEPTH_,int PPC_>
+template<typename FP_T_,int MAX_STRIDE_,int MAX_COLS_,int MAX_ROWS_,int COLOR_CHANNELS_,int DEPTH_,int PPC_>
 inline static void rotateFrame
 (
-  ap_uint<2*DEPTH_*PPC_> S2mm[(MAX_STRIDE_/PPC_)*MAX_ROWS_],
-  ap_uint<2*DEPTH_*PPC_> Mm2s[(MAX_STRIDE_/PPC_)*MAX_ROWS_],
+  ap_uint<COLOR_CHANNELS_*DEPTH_*PPC_> S2mm[(MAX_STRIDE_/PPC_)*MAX_ROWS_],
+  ap_uint<COLOR_CHANNELS_*DEPTH_*PPC_> Mm2s[(MAX_STRIDE_/PPC_)*MAX_ROWS_],
   ap_uint<Bit_Width<MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Height,
   FP_T_ Mat[2][3]
@@ -83,7 +83,7 @@ inline static void rotateFrame
         Mm2s_Y_[J_]=Mat[1][0]*static_cast<FP_T_>(X_*PPC_+J_)+Mat[1][1]*static_cast<FP_T_>(Y_)+Mat[1][2];
       }
 
-      ap_uint<2*DEPTH_*PPC_> Mm2s_;
+      ap_uint<COLOR_CHANNELS_*DEPTH_*PPC_> Mm2s_;
       loopReadSrc: for(auto J_ {0};J_<PPC_;++J_){
 #pragma HLS UNROLL
         if(Mm2s_X_[J_]>=FP_T_ {0}&&Mm2s_X_[J_]<static_cast<FP_T_>(Width)&&Mm2s_Y_[J_]>=FP_T_ {0}&&Mm2s_Y_[J_]<static_cast<FP_T_>(Height)){
@@ -92,37 +92,37 @@ inline static void rotateFrame
           const auto Mm2s_Xshift_ {Mm2s_Xdec_(Bit_Width<MAX_ROWS_>::Value-1,Bit_Width<PPC_>::Value-1)};
           const auto S2mm_ {S2mm[(MAX_STRIDE_/PPC_)*Mm2s_Ydec_+Mm2s_Xshift_]};
 #if 1==D_PPC_
-          Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*0+2*DEPTH_-1,2*DEPTH_*0);
+          Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*0+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*0);
 #else
           switch(Mm2s_Xdec_(Bit_Width<PPC_>::Value-2,0)){
             case 0:
-              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*0+2*DEPTH_-1,2*DEPTH_*0);
+              Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*0+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*0);
               break;
             case 1:
-              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*1+2*DEPTH_-1,2*DEPTH_*1);
+              Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*1+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*1);
               break;
             case 2:
-              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*2+2*DEPTH_-1,2*DEPTH_*2);
+              Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*2+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*2);
               break;
             case 3:
-              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*3+2*DEPTH_-1,2*DEPTH_*3);
+              Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*3+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*3);
               break;
             case 4:
-              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*4+2*DEPTH_-1,2*DEPTH_*4);
+              Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*4+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*4);
               break;
             case 5:
-              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*5+2*DEPTH_-1,2*DEPTH_*5);
+              Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*5+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*5);
               break;
             case 6:
-              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*6+2*DEPTH_-1,2*DEPTH_*6);
+              Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*6+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*6);
               break;
             case 7:
-              Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=S2mm_(2*DEPTH_*7+2*DEPTH_-1,2*DEPTH_*7);
+              Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=S2mm_(COLOR_CHANNELS_*DEPTH_*7+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*7);
               break;
           }
 #endif
         } else {
-          Mm2s_(2*DEPTH_*J_+2*DEPTH_-1,2*DEPTH_*J_)=ap_uint<2*DEPTH_> {0x80};
+          Mm2s_(COLOR_CHANNELS_*DEPTH_*J_+COLOR_CHANNELS_*DEPTH_-1,COLOR_CHANNELS_*DEPTH_*J_)=ap_uint<COLOR_CHANNELS_*DEPTH_> {0};
         }
       }
 

@@ -42,9 +42,9 @@ void goldenWarpAffine(const cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Si
             double srcX = M.at<double>(0, 0) * x + M.at<double>(0, 1) * y + M.at<double>(0, 2);
             double srcY = M.at<double>(1, 0) * x + M.at<double>(1, 1) * y + M.at<double>(1, 2);
             if (srcX >= 0 && srcX < src.cols && srcY >= 0 && srcY < src.rows) {
-                dst.at<cv::Vec2b>(y, x) = src.at<cv::Vec2b>(cv::Point(srcX, srcY));
+                dst.at<cv::Vec3b>(y, x) = src.at<cv::Vec3b>(cv::Point(srcX, srcY));
             } else {
-                dst.at<cv::Vec2b>(y, x) = 0x80;
+                dst.at<cv::Vec3b>(y, x) = 0x80;
             }
         }
         
@@ -80,7 +80,7 @@ void warpAffine(cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize
 
             float srcX[PPC_];
             float srcY[PPC_];
-            cv::Vec2b srcXY[PPC_];
+            cv::Vec3b srcXY[PPC_];
 
             for(auto J=0;J<PPC_;++J){
               srcX[J] = M.at<float>(0, 0) * (x*PPC_+J) + M.at<float>(0, 1) * y + M.at<float>(0, 2);
@@ -92,7 +92,7 @@ void warpAffine(cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize
               if (srcX[J] >= 0 && srcX[J] < src.cols && srcY[J] >= 0 && srcY[J] < src.rows) {
 
 
-                srcXY[J] = src.at<cv::Vec2b>(cv::Point(srcX[J], srcY[J]));
+                srcXY[J] = src.at<cv::Vec3b>(cv::Point(srcX[J], srcY[J]));
 
 
               } else {
@@ -101,7 +101,7 @@ void warpAffine(cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize
             }
 
             for(auto J=0;J<PPC_;++J){
-                  dst.at<cv::Vec2b>(y, x*PPC_+J) = srcXY[J];
+                  dst.at<cv::Vec3b>(y, x*PPC_+J) = srcXY[J];
             }
         }
         
@@ -121,18 +121,18 @@ int testFunction(
       return 1;
     }
 
-    cv::Mat imageUyvy(imageBgr.size(), CV_8UC2);
-    for (int y = 0; y < imageUyvy.rows; y++) {
-        for (int x = 0; x < imageUyvy.cols; x += 2) {
-            imageUyvy.at<cv::Vec2b>(y, x)[1] = imageBgr.at<cv::Vec3b>(y, x)[1];  // U
-            imageUyvy.at<cv::Vec2b>(y, x)[0] = imageBgr.at<cv::Vec3b>(y, x)[0];  // Y
-            imageUyvy.at<cv::Vec2b>(y, x + 1)[1] = imageBgr.at<cv::Vec3b>(y, x + 1)[1];  // V
-            imageUyvy.at<cv::Vec2b>(y, x + 1)[0] = imageBgr.at<cv::Vec3b>(y, x)[0];  // Y
-        }
-    }
+    //cv::Mat imageUyvy(imageBgr.size(), CV_8UC2);
+    //for (int y = 0; y < imageUyvy.rows; y++) {
+    //    for (int x = 0; x < imageUyvy.cols; x += 2) {
+    //        imageUyvy.at<cv::Vec2b>(y, x)[1] = imageBgr.at<cv::Vec3b>(y, x)[1];  // U
+    //        imageUyvy.at<cv::Vec2b>(y, x)[0] = imageBgr.at<cv::Vec3b>(y, x)[0];  // Y
+    //        imageUyvy.at<cv::Vec2b>(y, x + 1)[1] = imageBgr.at<cv::Vec3b>(y, x + 1)[1];  // V
+    //        imageUyvy.at<cv::Vec2b>(y, x + 1)[0] = imageBgr.at<cv::Vec3b>(y, x)[0];  // Y
+    //    }
+    //}
 
     Geometric_Transform geo;
-    cv::Point2f center(imageUyvy.cols / 2.0, imageUyvy.rows / 2.0);
+    cv::Point2f center(imageBgr.cols / 2.0, imageBgr.rows / 2.0);
     //float scale = 1.0;
 
     // Döndürme matrisi oluştur
@@ -140,73 +140,94 @@ int testFunction(
     // Ek kaydırma (y ekseninde 10 piksel)
     rotMat.at<float>(1, 2) += 100;
 
-    static ap_uint<2*D_DEPTH_*D_PPC_> S2mm[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_];
-    for(auto Y=0;Y<imageUyvy.rows;++Y){
-      for(auto X=0;X<imageUyvy.cols/8;++X){
-        ap_uint<2*D_DEPTH_*D_PPC_> S2mm_;
+    static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> S2mm[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_];
+    for(auto Y=0;Y<imageBgr.rows;++Y){
+      for(auto X=0;X<imageBgr.cols/D_PPC_;++X){
+        ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> S2mm_;
         for(auto J=0;J<D_PPC_;++J){
-          cv::Vec2b Pix=imageUyvy.at<cv::Vec2b>(Y,X*8+J);
-          S2mm_(2*D_DEPTH_*J+2*D_DEPTH_-1,2*D_DEPTH_*J)=ap_uint<2*D_DEPTH_> {(ap_uint<8> {Pix[1]},ap_uint<8> {Pix[0]})};
+          cv::Vec3b Pix=imageBgr.at<cv::Vec3b>(Y,X*D_PPC_+J);
+          S2mm_(D_COLOR_CHANNELS_*D_DEPTH_*J+D_COLOR_CHANNELS_*D_DEPTH_-1,D_COLOR_CHANNELS_*D_DEPTH_*J)=ap_uint<D_COLOR_CHANNELS_*D_DEPTH_> {(ap_uint<8> {0}, ap_uint<8> {Pix[2]},ap_uint<8> {Pix[1]},ap_uint<8> {Pix[0]})};
         }
         S2mm[(D_MAX_STRIDE_/D_PPC_)*Y+X]=S2mm_;
       }
     }
 
-    static ap_uint<2*D_DEPTH_*D_PPC_> Mm2s[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_];
+#if 1
+    for(auto Y=0;Y<imageBgr.rows;++Y){
+      for(auto X=0;X<imageBgr.cols/D_PPC_;++X){
+        ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> S2mm_=S2mm[(D_MAX_STRIDE_/D_PPC_)*Y+X];
+        for(auto J=0;J<D_PPC_;++J){
+          ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> S2mm_Pix_;
+          cv::Vec3b Pix_;
+      
+          S2mm_Pix_=S2mm_(D_COLOR_CHANNELS_*D_DEPTH_*J+D_COLOR_CHANNELS_*D_DEPTH_-1,D_COLOR_CHANNELS_*D_DEPTH_*J);
+          Pix_[0]=S2mm_Pix_(7,0);
+          Pix_[1]=S2mm_Pix_(15,8);
+          Pix_[2]=S2mm_Pix_(23,16);
+          imageBgr.at<cv::Vec3b>(Y,X*D_PPC_+J)=Pix_;
+        }
+      }
+    }
+#endif
+
+    static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> Mm2s[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_];
     D_TOP_(
       S2mm,
       Mm2s,
-      imageUyvy.cols,
-      imageUyvy.rows,
+      imageBgr.cols,
+      imageBgr.rows,
       100,
       Angle,
       Scale
     );
 
-    cv::Mat imageUyvyRotated(imageUyvy.size(), CV_8UC2);
-    for(auto Y=0;Y<imageUyvyRotated.rows;++Y){
-      for(auto X=0;X<imageUyvyRotated.cols/D_PPC_;++X){
-        ap_uint<2*D_DEPTH_*D_PPC_> Mm2s_=Mm2s[(D_MAX_STRIDE_/D_PPC_)*Y+X];
+    cv::Mat imageBgrRotated(imageBgr.size(), CV_8UC3);
+    for(auto Y=0;Y<imageBgrRotated.rows;++Y){
+      for(auto X=0;X<imageBgrRotated.cols/D_PPC_;++X){
+        ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> Mm2s_=Mm2s[(D_MAX_STRIDE_/D_PPC_)*Y+X];
         for(auto J=0;J<D_PPC_;++J){
-          cv::Vec2b Pix;
-          ap_uint<16> Pix_=Mm2s_(2*D_DEPTH_*J+2*D_DEPTH_-1,2*D_DEPTH_*J);
-          Pix[0]=Pix_(7,0);
-          Pix[1]=Pix_(15,8);
-          imageUyvyRotated.at<cv::Vec2b>(Y,D_PPC_*X+J)=Pix;
+          cv::Vec3b Pix_;
+          ap_uint<D_COLOR_CHANNELS_*D_DEPTH_> Mm2s_Pix_;
+
+          Mm2s_Pix_=Mm2s_(D_COLOR_CHANNELS_*D_DEPTH_*J+D_COLOR_CHANNELS_*D_DEPTH_-1,D_COLOR_CHANNELS_*D_DEPTH_*J);
+          Pix_[0]=Mm2s_Pix_(7,0);
+          Pix_[1]=Mm2s_Pix_(15,8);
+          Pix_[2]=Mm2s_Pix_(23,16);
+          imageBgrRotated.at<cv::Vec3b>(Y,D_PPC_*X+J)=Pix_;
         }
       }
     }
 
-    cv::Mat imageBgrRotatedx;
-    cv::cvtColor(imageUyvyRotated, imageBgrRotatedx, cv::COLOR_YUV2BGR_UYVY);
-    const std::string imageBgrRotatedxStr {std::to_string(index)+"hls_"+std::to_string(angle)+".jpg"};
-    cv::imwrite(imageBgrRotatedxStr, imageBgrRotatedx);
+    //cv::Mat imageBgrRotatedx;
+    //cv::cvtColor(imageUyvyRotated, imageBgrRotatedx, cv::COLOR_YUV2BGR_UYVY);
+    const std::string imageBgrRotatedStr {std::to_string(index)+"hls_"+std::to_string(angle)+".jpg"};
+    cv::imwrite(imageBgrRotatedStr, imageBgrRotated);
 
-    cv::Mat rotatedImage;
-    rotatedImage=cv::Mat(imageUyvy.size(),imageUyvy.type());
-    warpAffine<D_PPC_>(imageUyvy, rotatedImage, rotMat, imageUyvy.size());
+    cv::Mat rotatedImageBgr;
+    rotatedImageBgr=cv::Mat(imageBgr.size(),imageBgr.type());
+    warpAffine<D_PPC_>(imageBgr, rotatedImageBgr, rotMat, imageBgr.size());
 
-    cv::Mat rotatedImageBgr(imageBgr.size(),CV_8UC3);
-    cv::cvtColor(rotatedImage, rotatedImageBgr, cv::COLOR_YUV2BGR_UYVY);
+    //cv::Mat rotatedImageBgr(imageBgr.size(),CV_8UC3);
+    //cv::cvtColor(rotatedImageBgr, rotatedImageBgr, cv::COLOR_YUV2BGR_UYVY);
     const std::string rotatedImageBgrStr {std::to_string(index)+"ref_"+std::to_string(angle)+".jpg"};
-    cv::imwrite(rotatedImageBgrStr, rotatedImageBgr);
+    cv::imwrite(rotatedImageBgrStr,rotatedImageBgr);
 
 
     // GOLDEN
     double goldenscale = 1.0;
 
     // Döndürme matrisi oluştur
-    cv::Point2f goldencenter(imageUyvy.cols / 2.0, imageUyvy.rows / 2.0);
+    cv::Point2f goldencenter(imageBgr.cols / 2.0, imageBgr.rows / 2.0);
     cv::Mat goldenRotMat = goldenGetRotationMatrix2D(goldencenter, goldenangle, goldenscale);
     // Ek kaydırma (y ekseninde 10 piksel)
     goldenRotMat.at<double>(1, 2) += 100;
 
-    cv::Mat rotatedImageGolden;
-    rotatedImageGolden=cv::Mat(imageUyvy.size(),imageUyvy.type());
-    goldenWarpAffine(imageUyvy, rotatedImageGolden, goldenRotMat, imageUyvy.size());
+    cv::Mat rotatedImageBgrGolden;
+    rotatedImageBgrGolden=cv::Mat(imageBgr.size(),imageBgr.type());
+    goldenWarpAffine(imageBgr, rotatedImageBgrGolden, goldenRotMat, imageBgr.size());
 
-    cv::Mat rotatedImageBgrGolden(imageBgr.size(),CV_8UC3);
-    cv::cvtColor(rotatedImageGolden,rotatedImageBgrGolden, cv::COLOR_YUV2BGR_UYVY);
+    //cv::Mat rotatedImageBgrGolden(imageBgr.size(),CV_8UC3);
+    //cv::cvtColor(rotatedImageGolden,rotatedImageBgrGolden, cv::COLOR_YUV2BGR_UYVY);
     const std::string rotatedImageGoldenStr {std::to_string(index)+"golden_"+std::to_string(goldenangle)+".jpg"};
     cv::imwrite(rotatedImageGoldenStr, rotatedImageBgrGolden);
 
@@ -218,11 +239,11 @@ int testFunction(
 
 int main()
 {
-  double goldenangle = 91.0;
+  double goldenangle = 1.0;
   int result;
   int index=0;
 
-  for(float angle=float(goldenangle); angle<112.0f;angle+=1.0f){
+  for(float angle=float(goldenangle); angle<360.0f;angle+=1.0f){
     float scale=1.0f;
     fp_struct<D_FP_T_> Angle=fp_struct<D_FP_T_>(D_FP_T_(angle));
     fp_struct<D_FP_T_> Scale=fp_struct<D_FP_T_>(D_FP_T_(scale));
