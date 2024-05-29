@@ -8,10 +8,7 @@
 #include "bit_width.h"
 #include "type_width.h"
 #include "hls_math.h"
-#include "sinfunction.h"
-#include "cosfunction.h"
 #include "fptfunction.h"
-#include "pifunction.h"
 
 void D_TOP_
 (
@@ -20,14 +17,18 @@ void D_TOP_
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Shift_Y,
-  ap_uint<Type_Width<D_FP_T_>::Value> Angle,
-  ap_uint<Type_Width<D_FP_T_>::Value> Scale
+  ap_uint<Type_Width<D_FP_T_>::Value> Alpha,
+  ap_uint<Type_Width<D_FP_T_>::Value> Beta,
+  ap_uint<Type_Width<D_FP_T_>::Value> Center_X,
+  ap_uint<Type_Width<D_FP_T_>::Value> Center_Y
 );
 
 template<typename FP_T_,int MAX_COLS_,int MAX_ROWS_>
 inline static void calcGeoMatrix(
-  ap_uint<Type_Width<FP_T_>::Value> Angle,
-  ap_uint<Type_Width<FP_T_>::Value> Scale,
+  ap_uint<Type_Width<FP_T_>::Value> Alpha,
+  ap_uint<Type_Width<FP_T_>::Value> Beta,
+  ap_uint<Type_Width<FP_T_>::Value> Center_X,
+  ap_uint<Type_Width<FP_T_>::Value> Center_Y,
   ap_uint<Bit_Width<MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Height,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Shift_Y,
@@ -41,19 +42,17 @@ inline static void calcGeoMatrix(
 #pragma HLS ALLOCATION operation instances=hsub limit=1
 #pragma HLS ALLOCATION operation instances=hdiv limit=1
 
-  const auto Scale_ {Fpt_Func(Scale)};
-  const auto Angle_ {Fpt_Func(Angle)};
-  const auto Mypi_ {Pi_Func<FP_T_>()};
-
-  const auto Alpha_ {FP_T_ {Scale_*Cos_Func(FP_T_ {Angle_*Mypi_/FP_T_ {180}})}};
-  const auto Beta_ {FP_T_ {Scale_*Sin_Func(FP_T_ {Angle_*Mypi_/FP_T_ {180}})}};
-
+  const auto Alpha_ {Fpt_Func(Alpha)};
+  const auto Beta_ {Fpt_Func(Beta)};
+  const auto Center_X_ {Fpt_Func(Center_X)};
+  const auto Center_Y_ {Fpt_Func(Center_Y)};
+ 
   Mat[0][0]=Alpha_;
   Mat[0][1]=-Beta_;
-  Mat[0][2]=(ap_uint<1> {1}-Alpha_)*(static_cast<FP_T_>(Width)/FP_T_ {2})+Beta_*(static_cast<FP_T_>(Height)/FP_T_ {2});
+  Mat[0][2]=(ap_uint<1> {1}-Alpha_)*Center_X_+Beta_*Center_Y_;
   Mat[1][0]=Beta_;
   Mat[1][1]=Alpha_;
-  Mat[1][2]=(ap_uint<1> {1}-Alpha_)*(static_cast<FP_T_>(Height)/FP_T_ {2})-Beta_*(static_cast<FP_T_>(Width)/FP_T_ {2});
+  Mat[1][2]=(ap_uint<1> {1}-Alpha_)*Center_Y_-Beta_*Center_X_;
   Mat[1][2]+=Shift_Y;
 }
 

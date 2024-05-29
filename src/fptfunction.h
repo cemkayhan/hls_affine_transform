@@ -4,7 +4,7 @@
 #include "type_width.h"
 
 inline static float Fpt_Func(
-  ap_uint<Type_Width<float>::Value> Param
+  ap_uint<Type_Width<float>::Value> Param 
 ){
 #pragma HLS INLINE
 
@@ -13,10 +13,10 @@ inline static float Fpt_Func(
 }
 
 inline static half Fpt_Func(
-  ap_uint<Type_Width<half>::Value> Param
+  ap_uint<Type_Width<half>::Value> Param 
 ){
 #pragma HLS INLINE
-
+  
   const auto Param_ {fp_struct<half> {Param}};
   return Param_.to_half();
 }

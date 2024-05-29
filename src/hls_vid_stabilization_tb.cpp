@@ -55,9 +55,9 @@ void goldenWarpAffine(const cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Si
 // GOLDEN
 
 
-cv::Mat Geometric_Transform::getRotationMatrix2D(cv::Point2f center, float angle, float scale) {
-    float alpha = scale * cos(angle * float {CV_PI} / 180.0f);
-    float beta = scale * sin(angle * float {CV_PI} / 180.0f);
+cv::Mat getRotationMatrix2D(cv::Point2f center, float angle, float scale, float& alpha, float& beta) {
+    alpha = scale * cos(angle * float {CV_PI} / 180.0f);
+    beta = scale * sin(angle * float {CV_PI} / 180.0f);
 
     cv::Mat rot_mat = cv::Mat::zeros(2, 3, CV_64F); //2x3 matrix oluşturuyoruz
     rot_mat.at<float>(0, 0) = alpha;
@@ -136,7 +136,9 @@ int testFunction(
     //float scale = 1.0;
 
     // Döndürme matrisi oluştur
-    cv::Mat rotMat = geo.getRotationMatrix2D(center, angle, scale);
+    float alpha;
+    float beta;
+    cv::Mat rotMat = getRotationMatrix2D(center, angle, scale, alpha, beta);
     // Ek kaydırma (y ekseninde 10 piksel)
     rotMat.at<float>(1, 2) += 100;
 
@@ -170,6 +172,10 @@ int testFunction(
     }
 #endif
 
+    fp_struct<D_FP_T_> Alpha=fp_struct<D_FP_T_>(alpha);
+    fp_struct<D_FP_T_> Beta=fp_struct<D_FP_T_>(beta);
+    fp_struct<D_FP_T_> Center_X=fp_struct<D_FP_T_>(center.x);
+    fp_struct<D_FP_T_> Center_Y=fp_struct<D_FP_T_>(center.y);
     static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> Mm2s[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_];
     D_TOP_(
       S2mm,
@@ -177,8 +183,10 @@ int testFunction(
       imageBgr.cols,
       imageBgr.rows,
       100,
-      Angle,
-      Scale
+      Alpha.data(),
+      Beta.data(),
+      Center_X.data(),
+      Center_Y.data()
     );
 
     cv::Mat imageBgrRotated(imageBgr.size(), CV_8UC3);
@@ -239,11 +247,11 @@ int testFunction(
 
 int main()
 {
-  double goldenangle = 1.0;
+  double goldenangle = 21.0;
   int result;
   int index=0;
 
-  for(float angle=float(goldenangle); angle<360.0f;angle+=1.0f){
+  for(float angle=float(goldenangle); angle<23.0f;angle+=1.0f){
     float scale=1.0f;
     fp_struct<D_FP_T_> Angle=fp_struct<D_FP_T_>(D_FP_T_(angle));
     fp_struct<D_FP_T_> Scale=fp_struct<D_FP_T_>(D_FP_T_(scale));
