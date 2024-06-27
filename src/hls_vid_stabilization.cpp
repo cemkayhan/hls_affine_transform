@@ -12,19 +12,19 @@ void D_TOP_
   ap_uint<Type_Width<D_FP_T_>::Value> Center_X,
   ap_uint<Type_Width<D_FP_T_>::Value> Center_Y
 ){
-#pragma HLS INTERFACE m_axi port=S2mm bundle=myaxi depth=(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_
-#pragma HLS INTERFACE m_axi port=Mm2s bundle=myaxi depth=(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_
+#pragma HLS INTERFACE m_axi port=S2mm bundle=s2mmaxi depth=(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_
+#pragma HLS INTERFACE m_axi port=Mm2s bundle=mm2saxi depth=(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_
 
 #pragma HLS INTERFACE s_axilite bundle=ctrl port=return
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=Width offset=0x10
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=Height offset=0x18
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=Shift_Y offset=0x20
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=Alpha offset=0x28
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=Beta offset=0x30
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=Center_X offset=0x38
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=Center_Y offset=0x40
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=S2mm offset=0x48
-#pragma HLS INTERFACE s_axilite bundle=ctrl port=Mm2s offset=0x50
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x10 port=Width
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x18 port=Height
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x20 port=Shift_Y
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x28 port=Alpha
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x30 port=Beta
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x38 port=Center_X
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x40 port=Center_Y
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x48 port=S2mm
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x50 port=Mm2s
 
 #pragma HLS STABLE variable=Width
 #pragma HLS STABLE variable=Height
