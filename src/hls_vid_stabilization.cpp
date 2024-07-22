@@ -3,8 +3,8 @@
 static void Func1(
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
-  hls::stream<ap_int<16>>& srcXStream,
-  hls::stream<ap_int<16>>& srcYStream,
+  hls::stream<ap_int<16*D_STRM_PPC_>>& srcXStream,
+  hls::stream<ap_int<16*D_STRM_PPC_>>& srcYStream,
   hls::stream<ap_int<16>>& topLeftX,
   hls::stream<ap_int<16>>& topLeftY,
   float rotMat00, float rotMat01, float rotMat02,
@@ -24,25 +24,28 @@ static void Func1(
       ap_int<16> topLeftY_;
 
       loopBlockRows: for(auto JJ_=0;JJ_<D_BLOCK_SIZE_;++JJ_){
-        loopBlockCols: for(auto KK_=0;KK_<D_BLOCK_SIZE_;++KK_){
+        loopBlockCols: for(auto KK_=0;KK_<(D_BLOCK_SIZE_/D_STRM_PPC_);++KK_){
+          ap_int<16*D_STRM_PPC_> SrcX_;
+          ap_int<16*D_STRM_PPC_> SrcY_;
+          for(auto II_=0;II_<D_STRM_PPC_;++II_){
 #pragma HLS PIPELINE II=1
-
-          const auto SrcX_{static_cast<ap_int<16>>(rotMat00*(KK_+K_)+rotMat01*(JJ_+J_)+rotMat02)};
-          const auto SrcY_{static_cast<ap_int<16>>(rotMat10*(KK_+K_)+rotMat11*(JJ_+J_)+rotMat12)};
+            SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat00*((KK_*D_STRM_PPC_+II_)+K_)+rotMat01*(JJ_+J_)+rotMat02);
+            SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat10*((KK_*D_STRM_PPC_+II_)+K_)+rotMat11*(JJ_+J_)+rotMat12);
+            if(!topLeftXSet_){
+              topLeftXSet_=true;
+              topLeftX_=SrcX_(II_*16+15,II_*16);
+            } else if(topLeftX_>ap_int<16> {SrcX_(II_*16+15,II_*16)}){
+              topLeftX_=SrcX_(II_*16+15,II_*16);
+            }
+            if(!topLeftYSet_){
+              topLeftYSet_=true;
+              topLeftY_=SrcY_(II_*16+15,II_*16);
+            } else if(topLeftY_>ap_int<16> {SrcY_(II_*16+15,II_*16)}){
+              topLeftY_=SrcY_(II_*16+15,II_*16);
+            }
+          }
           srcXStream.write(SrcX_);
           srcYStream.write(SrcY_);
-          if(!topLeftXSet_){
-            topLeftXSet_=true;
-            topLeftX_=SrcX_;
-          } else if(topLeftX_>SrcX_){
-            topLeftX_=SrcX_;
-          }
-          if(!topLeftYSet_){
-            topLeftYSet_=true;
-            topLeftY_=SrcY_;
-          } else if(topLeftY_>SrcY_){
-            topLeftY_=SrcY_;
-          }
         }
       }
       topLeftX.write(topLeftX_);
@@ -56,8 +59,8 @@ static void Func2(
   hls::stream<ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_PPC_>::Value> >& srcStream,
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
-  hls::stream<ap_int<16>>& srcXStream,
-  hls::stream<ap_int<16>>& srcYStream,
+  hls::stream<ap_int<16*D_STRM_PPC_>>& srcXStream,
+  hls::stream<ap_int<16*D_STRM_PPC_>>& srcYStream,
   hls::stream<ap_int<16>>& topLeftX,
   hls::stream<ap_int<16>>& topLeftY
 ){
@@ -66,27 +69,28 @@ static void Func2(
   loopRows: for(auto J_=0;J_<Height;J_+=D_BLOCK_SIZE_){
 #pragma HLS LOOP_TRIPCOUNT min=D_MAX_ROWS_/D_BLOCK_SIZE_ max=D_MAX_ROWS_/D_BLOCK_SIZE_
 
-    //loopCols: for(auto K_=0;K_<Width;K_+=D_BLOCK_SIZE_){
-    loopCols: for(auto K_=0;K_<D_MAX_COLS_;K_+=D_BLOCK_SIZE_){
-//#pragma HLS LOOP_TRIPCOUNT min=D_MAX_COLS_/D_BLOCK_SIZE_ max=D_MAX_COLS_/D_BLOCK_SIZE_
+    loopCols: for(auto K_=0;K_<Width;K_+=D_BLOCK_SIZE_){
+    //loopCols: for(auto K_=0;K_<D_MAX_COLS_;K_+=D_BLOCK_SIZE_){
+#pragma HLS LOOP_TRIPCOUNT min=D_MAX_COLS_/D_BLOCK_SIZE_ max=D_MAX_COLS_/D_BLOCK_SIZE_
 
       ap_int<16> topLeftX_;
       ap_int<16> topLeftY_;
       topLeftX>>topLeftX_;
       topLeftY>>topLeftY_;
 
-      static ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> tmp[(2*D_BLOCK_SIZE_)][(2*D_BLOCK_SIZE_)];
-#pragma HLS ARRAY_PARTITION variable=tmp type=cyclic factor=8 dim=2
+      static ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> tmp[D_STRM_PPC_][(2*D_BLOCK_SIZE_)][(2*D_BLOCK_SIZE_)];
+#pragma HLS ARRAY_PARTITION variable=tmp type=block factor=4 dim=1
+#pragma HLS BIND_STORAGE variable=tmp type=RAM_T2P impl=URAM
 
-#pragma HLS LOOP_MERGE
+//#pragma HLS LOOP_MERGE
 
       loopBlockRows: for(auto JJ_=0;JJ_<(2*D_BLOCK_SIZE_);++JJ_){
         loopBlockCols: for(auto KK_=0;KK_<((2*D_BLOCK_SIZE_)/D_MM_PPC_);++KK_){
           const auto pix_ {srcAxi[(JJ_+topLeftY_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(KK_+((topLeftX_+D_COLS_MARGIN_)/D_MM_PPC_))]};
  
-          loopBlockColsPpc: for(auto I_=0;I_<D_MM_PPC_;++I_){
+          loopBlockColsPpc: for(auto II_=0;II_<D_MM_PPC_;++II_){
 #pragma HLS UNROLL
-            tmp[JJ_][KK_*D_MM_PPC_+I_]=pix_(I_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,I_*D_COLOR_CHANNELS_*D_DEPTH_);
+            tmp[II_][JJ_][KK_*D_MM_PPC_+II_]=pix_(II_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,II_*D_COLOR_CHANNELS_*D_DEPTH_);
           }
         }
       }
@@ -104,12 +108,13 @@ static void Func2(
       loopBlockRows2: for(auto JJ_=0;JJ_<D_BLOCK_SIZE_;++JJ_){
         loopBlockCols2: for(auto KK_=0;KK_<(D_BLOCK_SIZE_/D_STRM_PPC_);++KK_){
           ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_PPC_>::Value> srcStreamPix_;
+          ap_int<16*D_STRM_PPC_> srcXStream_;
+          ap_int<16*D_STRM_PPC_> srcYStream_;
+          srcXStream>>srcXStream_;
+          srcYStream>>srcYStream_;
           loopStrmPpc: for(auto II_=0;II_<D_STRM_PPC_;++II_){
-            ap_int<16> srcXStream_;
-            ap_int<16> srcYStream_;
-            srcXStream>>srcXStream_;
-            srcYStream>>srcYStream_;
-            srcStreamPix_(II_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,II_*D_COLOR_CHANNELS_*D_DEPTH_)=tmp[(srcYStream_+D_ROWS_MARGIN_)-(topLeftY_+D_ROWS_MARGIN_)][(srcXStream_+tmpTmp2_+D_COLS_MARGIN_)-(topLeftX_+D_COLS_MARGIN_)];
+#pragma HLS UNROLL
+            srcStreamPix_(II_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,II_*D_COLOR_CHANNELS_*D_DEPTH_)=tmp[II_][(ap_int<16> {srcYStream_(II_*16+15,II_*16)}+D_ROWS_MARGIN_)-(topLeftY_+D_ROWS_MARGIN_)][(ap_int<16> {srcXStream_(II_*16+15,II_*16)}+tmpTmp2_+D_COLS_MARGIN_)-(topLeftX_+D_COLS_MARGIN_)];
           }
           srcStream<<srcStreamPix_;
         }
@@ -192,10 +197,10 @@ void D_TOP_
   hls::stream<ap_int<16>> topLeftY_("topLeftY");
 #pragma HLS STREAM variable=topLeftY_ depth=8
 
-  hls::stream<ap_int<16>> srcXStream_("srcXStream_");
+  hls::stream<ap_int<16*D_STRM_PPC_>> srcXStream_("srcXStream_");
 #pragma HLS STREAM variable=srcXStream_ depth=8
 
-  hls::stream<ap_int<16>> srcYStream_("srcYStream_");
+  hls::stream<ap_int<16*D_STRM_PPC_>> srcYStream_("srcYStream_");
 #pragma HLS STREAM variable=srcYStream_ depth=8
 
   Func1(width_,height_,srcXStream_,srcYStream_,topLeftX_,topLeftY_,rotMat00_,rotMat01_,rotMat02_,rotMat10_,rotMat11_,rotMat12_);
