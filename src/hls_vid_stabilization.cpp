@@ -19,20 +19,18 @@ void Func1(
 ){
 #pragma HLS INLINE off
 
-  for(auto J_=0;J_<Height;J_+=32){
-    for(auto K_=0;K_<Width;K_+=32){
+  for(auto J_=0;J_<Height;J_+=D_BLOCK_SIZE_){
+    for(auto K_=0;K_<Width;K_+=D_BLOCK_SIZE_){
       auto topLeftXSet_{false};
       auto topLeftYSet_{false};
       int topLeftX_;
       int topLeftY_;
-      for(auto JJ_=0;JJ_<32;++JJ_){
-        for(auto KK_=0;KK_<32;++KK_){
+      for(auto JJ_=0;JJ_<D_BLOCK_SIZE_;++JJ_){
+        for(auto KK_=0;KK_<D_BLOCK_SIZE_;++KK_){
           const auto SrcX_{static_cast<int>(M[0][0]*(KK_+K_)+M[0][1]*(JJ_+J_)+M[0][2])};
           const auto SrcY_{static_cast<int>(M[1][0]*(KK_+K_)+M[1][1]*(JJ_+J_)+M[1][2])};
-          //srcXStream.write(SrcX_+Width/2);
-          //srcXStream.write(SrcX_+Width/D_PPC_/2);
           srcXStream.write(SrcX_);
-          srcYStream.write(SrcY_+Height/2);
+          srcYStream.write(SrcY_);
           if(!topLeftXSet_){
             topLeftXSet_=true;
             topLeftX_=SrcX_;
@@ -47,17 +45,14 @@ void Func1(
           }
         }
       }
-      //topLeftX.write(topLeftX_+Width/2);
-      //topLeftX.write(topLeftX_+Width/D_PPC_/2);
       topLeftX.write(topLeftX_);
-      topLeftY.write(topLeftY_+Height/2);
+      topLeftY.write(topLeftY_);
     }
   }
 }
 
 void Func2(
   ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> Src[(D_MAX_STRIDE_/D_PPC_)*(2*D_MAX_ROWS_)],
-  //hls::stream<ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_PPC_>::Value> >& srcStream,
   hls::stream<ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> >& srcStream,
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
@@ -68,46 +63,23 @@ void Func2(
 ){
 #pragma HLS INLINE off
 
-  std::ofstream ofs {"log.txt"};
-  for(auto J_=0;J_<Height;J_+=32){
-    for(auto K_=0;K_<Width;K_+=32){
+  for(auto J_=0;J_<Height;J_+=D_BLOCK_SIZE_){
+    for(auto K_=0;K_<Width;K_+=D_BLOCK_SIZE_){
       int topLeftX_;
       int topLeftY_;
-      topLeftX.read(topLeftX_);
-      topLeftY.read(topLeftY_);
-      ofs<<"J_: "<<J_<<", K_: "<<K_<<", topX: "<<topLeftX_<<", topY: "<<topLeftY_<<'\n';
+      topLeftX>>topLeftX_;
+      topLeftY>>topLeftY_;
 
-      //static ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_PPC_>::Value> tmp[64][64];
-      static ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> tmp[64][64];
+      static ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> tmp[(2*D_BLOCK_SIZE_)][(2*D_BLOCK_SIZE_)];
 
-      for(auto JJ_=0;JJ_<64;++JJ_){
-        std::ofstream myofs {"hls_"+std::to_string(J_)+"_"+std::to_string(K_)+"_"+std::to_string(JJ_)+".txt"};
-        for(auto KK_=0;KK_<(64/D_PPC_);++KK_){
-          //const auto pix_ {Src[(JJ_+topLeftY_)*(D_MAX_STRIDE_/D_PPC_)+(KK_+topLeftX_)]};
-          //const auto pix_ {Src[(JJ_+topLeftY_)*(D_MAX_STRIDE_/D_PPC_)+(KK_+topLeftX_+Width/2)]};
-          //const auto pix_ {Src[(JJ_+topLeftY_)*(D_MAX_STRIDE_/D_PPC_)+(KK_+((topLeftX_)/D_PPC_+(Width/2)/D_PPC_))]};
-          const auto pix_ {Src[(JJ_+topLeftY_)*(D_MAX_STRIDE_/D_PPC_)+(KK_+((topLeftX_+Width/2)/D_PPC_))]};
-          //const auto pix_ {Src[(JJ_+topLeftY_)*(D_MAX_STRIDE_/D_PPC_)+(KK_+(topLeftX_+Width/2)/D_PPC_)]};
+      for(auto JJ_=0;JJ_<(2*D_BLOCK_SIZE_);++JJ_){
+        for(auto KK_=0;KK_<((2*D_BLOCK_SIZE_)/D_PPC_);++KK_){
+          const auto pix_ {Src[(JJ_+topLeftY_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_PPC_)+(KK_+((topLeftX_+D_COLS_MARGIN_)/D_PPC_))]};
  
           for(auto I_=0;I_<D_PPC_;++I_){
 #pragma HLS UNROLL
             tmp[JJ_][KK_*D_PPC_+I_]=pix_(I_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,I_*D_COLOR_CHANNELS_*D_DEPTH_);
-            ap_uint<32> tmp2=tmp[JJ_][KK_*D_PPC_+I_];
-            myofs<<"topLeftX_: "<<topLeftX_<<", JJ_: "<<JJ_<<", KK_: "<<KK_*D_PPC_+I_<<", pix[0]: "<<tmp2(7,0)<<", pix[1]: "<<tmp2(15,8)<<", pix[2]: "<<tmp2(23,16)<<'\n';
           }
-        }
-      }
-
-      auto tmpTmp_=0;
-      cv::Mat tmpImg_=cv::Mat::zeros(64,64,CV_8UC3);
-      for(auto JJ_=0;JJ_<64;++JJ_){
-        for(auto KK_=tmpTmp_;KK_<64;++KK_){
-          ap_uint<32> tmp2=tmp[JJ_][KK_];
-          cv::Vec3b pix_;
-          pix_[0]=tmp2(7,0);
-          pix_[1]=tmp2(15,8);
-          pix_[2]=tmp2(23,16);
-          tmpImg_.at<cv::Vec3b>(JJ_,KK_-tmpTmp_)=pix_;
         }
       }
 
@@ -120,58 +92,37 @@ void Func2(
       auto tmpTmp2_=0;
 #endif
 
-      std::ofstream ofs2 {"topLeftX_"+std::to_string(J_)+"_"+std::to_string(K_)+".txt"};
-      ofs2<<"topLeftX: "<<topLeftX_<<", topLeftX/D_PPC_: "<<topLeftX_/D_PPC_<<'\n';
-      for(auto JJ_=0;JJ_<32;++JJ_){
-        for(auto KK_=0;KK_<32;++KK_){
+      for(auto JJ_=0;JJ_<D_BLOCK_SIZE_;++JJ_){
+        for(auto KK_=0;KK_<D_BLOCK_SIZE_;++KK_){
           int srcXStream_;
           int srcYStream_;
-          srcXStream.read(srcXStream_);
-          srcYStream.read(srcYStream_);
-          //srcStream.write(tmp[srcYStream_-topLeftY_][(srcXStream_+Width/2)-(topLeftX_+Width/2)]);
-          //srcStream.write(tmp[srcYStream_-topLeftY_][(srcXStream_+Width/2)-(topLeftX_+Width/2)]);
-          ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> tmpx_;
-          //tmpx_=tmp[srcYStream_-topLeftY_][(srcXStream_+Width/2)-(topLeftX_+Width/2)];
-          //tmpx_=tmp[srcYStream_-topLeftY_][(srcXStream_+Width/2)-(topLeftX_+Width/2)];
-          tmpx_=tmp[srcYStream_-topLeftY_][(srcXStream_+tmpTmp2_+Width/2)-(topLeftX_+Width/2)];
-          srcStream.write(tmpx_);
-          cv::Vec3b tmpPix_;
-          tmpPix_[0]=44;
-          tmpPix_[1]=144;
-          tmpPix_[2]=244;
-          tmpImg_.at<cv::Vec3b>(cv::Point((srcXStream_+tmpTmp2_+Width/2)-(topLeftX_+Width/2),srcYStream_-topLeftY_))=tmpPix_;
-          ofs2<<"srcYStream_-topLeftY_: "<<srcYStream_-topLeftY_<<", (srcXStream_+Width/2)-(topLeftX_+Width/2): "<<(srcXStream_+Width/2)-(topLeftX_+Width/2)
-              <<", pix[0]: "<<tmpx_(7,0)<<", pix[1]: "<<tmpx_(15,8)<<", pix[2]: "<<tmpx_(23,16)<<'\n';
+          srcXStream>>srcXStream_;
+          srcYStream>>srcYStream_;
+          srcStream<<tmp[(srcYStream_+D_ROWS_MARGIN_)-(topLeftY_+D_ROWS_MARGIN_)][(srcXStream_+tmpTmp2_+D_COLS_MARGIN_)-(topLeftX_+D_COLS_MARGIN_)];
         }
       }
-      cv::imwrite("tmpImgNow"+std::to_string(J_)+"_"+std::to_string(K_)+".png",tmpImg_);
     }
   }
 }
 
 void Func3(
-  //hls::stream<ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_PPC_>::Value> >& srcStream,
   hls::stream<ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> >& srcStream,
-  ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> DstAxi[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
-  ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
-  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height
+  ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> dstAxi[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_],
+  ap_uint<Bit_Width<D_MAX_COLS_>::Value> width,
+  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> height
 ){
-  for(auto J_=0;J_<Height;J_+=32){
-    for(auto K_=0;K_<Width;K_+=32){
-      for(auto JJ_=0;JJ_<32;++JJ_){
-        for(auto KK_=0;KK_<(32/D_PPC_);++KK_){
-          //ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_PPC_>::Value> srcStreamPix_;
-          //DstAxi[(J_+JJ_)*(D_MAX_STRIDE_/D_PPC_)+K_+KK_]=srcStreamPix_;
-
+  for(auto J_=0;J_<height;J_+=D_BLOCK_SIZE_){
+    for(auto K_=0;K_<width;K_+=D_BLOCK_SIZE_){
+      for(auto JJ_=0;JJ_<D_BLOCK_SIZE_;++JJ_){
+        for(auto KK_=0;KK_<(D_BLOCK_SIZE_/D_PPC_);++KK_){
           ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> dstAxiPix_;
           for(auto I_=0;I_<D_PPC_;++I_){
 #pragma HLS UNROLL
             ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> srcStreamPix_;
-            srcStream.read(srcStreamPix_);
+            srcStream>>srcStreamPix_;
             dstAxiPix_(I_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_,I_*D_COLOR_CHANNELS_*D_DEPTH_)=srcStreamPix_;
           }
-          //DstAxi[(J_+JJ_)*(D_MAX_STRIDE_/D_PPC_)+K_+KK_]=dstAxiPix_;
-          DstAxi[(J_+JJ_)*(D_MAX_STRIDE_/D_PPC_)+K_/D_PPC_+KK_]=dstAxiPix_;
+          dstAxi[(J_+JJ_)*(D_MAX_STRIDE_/D_PPC_)+K_/D_PPC_+KK_]=dstAxiPix_;
         }
       }
     }
@@ -211,7 +162,6 @@ void D_TOP_
 
 #pragma HLS DATAFLOW
 
-  //hls::stream<ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_PPC_>::Value> > srcStream_;
   hls::stream<ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> > srcStream_;
 #pragma HLS STREAM variable=srcStream_
 

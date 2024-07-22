@@ -6,7 +6,9 @@ D_PPC_=$(grep D_PPC_= ../CFLAGS|cut -d'=' -f2)
 D_MAX_ROWS_=$(grep D_MAX_ROWS_= ../CFLAGS|cut -d'=' -f2)
 D_MAX_COLS_=$(grep D_MAX_COLS_= ../CFLAGS|cut -d'=' -f2)
 D_MAX_STRIDE_=$(grep D_MAX_STRIDE_= ../CFLAGS|cut -d'=' -f2)
-D_FP_T_=$(grep D_FP_T_= ../CFLAGS|cut -d'=' -f2)
+D_COLS_MARGIN_=$(grep D_COLS_MARGIN_= ../CFLAGS|cut -d'=' -f2)
+D_ROWS_MARGIN_=$(grep D_ROWS_MARGIN_= ../CFLAGS|cut -d'=' -f2)
+D_BLOCK_SIZE_=$(grep D_BLOCK_SIZE_= ../CFLAGS|cut -d'=' -f2)
 
 D_ID_=$(cat ../ID)
 D_TOP_=$(cat ../TOP)_Id${D_ID_}
@@ -18,5 +20,7 @@ CFLAGS="$CFLAGS -DD_PPC_=$D_PPC_"
 CFLAGS="$CFLAGS -DD_MAX_ROWS_=$D_MAX_ROWS_"
 CFLAGS="$CFLAGS -DD_MAX_COLS_=$D_MAX_COLS_"
 CFLAGS="$CFLAGS -DD_MAX_STRIDE_=$D_MAX_STRIDE_"
-CFLAGS="$CFLAGS -DD_FP_T_=$D_FP_T_"
+CFLAGS="$CFLAGS -DD_COLS_MARGIN_=$D_COLS_MARGIN_"
+CFLAGS="$CFLAGS -DD_ROWS_MARGIN_=$D_ROWS_MARGIN_"
+CFLAGS="$CFLAGS -DD_BLOCK_SIZE_=$D_BLOCK_SIZE_"
 CFLAGS="$CFLAGS -DD_TOP_=$D_TOP_"

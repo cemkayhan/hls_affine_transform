@@ -36,7 +36,7 @@ int main()
 
   // GOLDEN
   double goldenscale = 1.0;
-  double goldenangle = -74.0;
+  double goldenangle = 84.0;
 
   // Döndürme matrisi oluştur
   cv::Point2f goldencenter(imgBgr.cols / 2.0, imgBgr.rows / 2.0);
@@ -97,8 +97,7 @@ int main()
         hlsPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+15,Z_*D_COLOR_CHANNELS_*D_DEPTH_+8)=Pix_[1];
         hlsPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+23,Z_*D_COLOR_CHANNELS_*D_DEPTH_+16)=Pix_[2];
       }
-      //imgHls[(J_+imgBgr.rows/2)*(D_MAX_STRIDE_/D_PPC_)+(K_+imgBgr.cols/2)]=hlsPix_;
-      imgHls[(J_+imgBgr.rows/2)*(D_MAX_STRIDE_/D_PPC_)+(K_+(imgBgr.cols/D_PPC_)/2)]=hlsPix_;
+      imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_PPC_)+(K_+D_COLS_MARGIN_/D_PPC_)]=hlsPix_;
       imgHlsDst[J_*imgBgr.cols+K_]=0;
     }
   }
@@ -125,7 +124,7 @@ int main()
     for(auto K_=0;K_<(imgBgr.cols/D_PPC_);++K_){
       ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> imgHlsDstPix_;
       //imgHlsDstPix_=imgHls[(J_+imgBgr.rows/2)*(D_MAX_STRIDE_/D_PPC_)+(K_+imgBgr.cols/2)];
-      imgHlsDstPix_=imgHls[(J_+imgBgr.rows/2)*(D_MAX_STRIDE_/D_PPC_)+(K_+(imgBgr.cols/D_PPC_)/2)];
+      imgHlsDstPix_=imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_PPC_)+(K_+D_COLS_MARGIN_/D_PPC_)];
       for(auto Z_=0;Z_<D_PPC_;++Z_){
         cv::Vec3b pix_;
         pix_[0]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+7,Z_*D_COLOR_CHANNELS_*D_DEPTH_+0);
