@@ -36,7 +36,7 @@ int main()
 
   // GOLDEN
   float goldenscale = 1.0;
-  float goldenangle = 20.0;
+  float goldenangle = -29.0;
 
   // Döndürme matrisi oluştur
   cv::Point2f goldencenter(imgBgr.cols / 2.0, imgBgr.rows / 2.0);

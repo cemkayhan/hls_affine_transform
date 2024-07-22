@@ -29,6 +29,7 @@ static void Func1(
           ap_int<16*D_STRM_PPC_> SrcY_;
           for(auto II_=0;II_<D_STRM_PPC_;++II_){
 #pragma HLS PIPELINE II=1
+
             SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat00*((KK_*D_STRM_PPC_+II_)+K_)+rotMat01*(JJ_+J_)+rotMat02);
             SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat10*((KK_*D_STRM_PPC_+II_)+K_)+rotMat11*(JJ_+J_)+rotMat12);
             if(!topLeftXSet_){
@@ -79,14 +80,14 @@ static void Func2(
 
       static ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> tmp[D_STRM_PPC_][(2*D_BLOCK_SIZE_)][(2*D_BLOCK_SIZE_)];
 #pragma HLS ARRAY_PARTITION variable=tmp type=block factor=D_STRM_PPC_ dim=1
-#pragma HLS ARRAY_PARTITION variable=tmp type=block factor=D_STRM_PPC_ dim=1
-//#pragma HLS BIND_STORAGE variable=tmp type=RAM_T2P impl=URAM
+#pragma HLS ARRAY_PARTITION variable=tmp type=cyclic factor=4 dim=3
+#pragma HLS BIND_STORAGE variable=tmp type=RAM_T2P impl=URAM
 
       loopBlockRows: for(auto JJ_=0;JJ_<(2*D_BLOCK_SIZE_);++JJ_){
         loopBlockCols: for(auto KK_=0;KK_<((2*D_BLOCK_SIZE_)/D_MM_PPC_);++KK_){
 #pragma HLS PIPELINE II=1
+
           const auto pix_ {srcAxi[(JJ_+topLeftY_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(KK_+((topLeftX_+D_COLS_MARGIN_)/D_MM_PPC_))]};
- 
           loopBlockColsPpc: for(auto II_=0;II_<D_MM_PPC_;++II_){
             loopBlockColsPpcTmp: for(auto TT_=0;TT_<D_STRM_PPC_;++TT_){
               tmp[TT_][JJ_][KK_*D_MM_PPC_+II_]=pix_(II_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,II_*D_COLOR_CHANNELS_*D_DEPTH_);
@@ -108,13 +109,13 @@ static void Func2(
       loopBlockRows2: for(auto JJ_=0;JJ_<D_BLOCK_SIZE_;++JJ_){
         loopBlockCols2: for(auto KK_=0;KK_<(D_BLOCK_SIZE_/D_STRM_PPC_);++KK_){
 #pragma HLS PIPELINE II=1
+
           ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_PPC_>::Value> srcStreamPix_;
           ap_int<16*D_STRM_PPC_> srcXStream_;
           ap_int<16*D_STRM_PPC_> srcYStream_;
           srcXStream>>srcXStream_;
           srcYStream>>srcYStream_;
           loopStrmPpc: for(auto II_=0;II_<D_STRM_PPC_;++II_){
-#pragma HLS UNROLL
             srcStreamPix_(II_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,II_*D_COLOR_CHANNELS_*D_DEPTH_)=tmp[II_][(ap_int<16> {srcYStream_(II_*16+15,II_*16)}+D_ROWS_MARGIN_)-(topLeftY_+D_ROWS_MARGIN_)][(ap_int<16> {srcXStream_(II_*16+15,II_*16)}+tmpTmp2_+D_COLS_MARGIN_)-(topLeftX_+D_COLS_MARGIN_)];
           }
           srcStream<<srcStreamPix_;
@@ -140,6 +141,8 @@ static void Func3(
 
       loopBlockRows: for(auto JJ_=0;JJ_<D_BLOCK_SIZE_;++JJ_){
         loopBlockCols: for(auto KK_=0;KK_<(D_BLOCK_SIZE_/D_MM_PPC_);++KK_){
+#pragma HLS PIPELINE II=D_MM_PPC_/D_STRM_PPC_
+
           ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstAxiPix_;
           loopBlockColsPpc: for(auto II_=0;II_<(D_MM_PPC_/D_STRM_PPC_);++II_){
             ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_PPC_>::Value> srcStreamPix_;
