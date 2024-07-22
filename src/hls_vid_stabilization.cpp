@@ -70,7 +70,6 @@ static void Func2(
 #pragma HLS LOOP_TRIPCOUNT min=D_MAX_ROWS_/D_BLOCK_SIZE_ max=D_MAX_ROWS_/D_BLOCK_SIZE_
 
     loopCols: for(auto K_=0;K_<Width;K_+=D_BLOCK_SIZE_){
-    //loopCols: for(auto K_=0;K_<D_MAX_COLS_;K_+=D_BLOCK_SIZE_){
 #pragma HLS LOOP_TRIPCOUNT min=D_MAX_COLS_/D_BLOCK_SIZE_ max=D_MAX_COLS_/D_BLOCK_SIZE_
 
       ap_int<16> topLeftX_;
@@ -79,18 +78,19 @@ static void Func2(
       topLeftY>>topLeftY_;
 
       static ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> tmp[D_STRM_PPC_][(2*D_BLOCK_SIZE_)][(2*D_BLOCK_SIZE_)];
-#pragma HLS ARRAY_PARTITION variable=tmp type=block factor=4 dim=1
-#pragma HLS BIND_STORAGE variable=tmp type=RAM_T2P impl=URAM
-
-//#pragma HLS LOOP_MERGE
+#pragma HLS ARRAY_PARTITION variable=tmp type=block factor=D_STRM_PPC_ dim=1
+#pragma HLS ARRAY_PARTITION variable=tmp type=block factor=D_STRM_PPC_ dim=1
+//#pragma HLS BIND_STORAGE variable=tmp type=RAM_T2P impl=URAM
 
       loopBlockRows: for(auto JJ_=0;JJ_<(2*D_BLOCK_SIZE_);++JJ_){
         loopBlockCols: for(auto KK_=0;KK_<((2*D_BLOCK_SIZE_)/D_MM_PPC_);++KK_){
+#pragma HLS PIPELINE II=1
           const auto pix_ {srcAxi[(JJ_+topLeftY_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(KK_+((topLeftX_+D_COLS_MARGIN_)/D_MM_PPC_))]};
  
           loopBlockColsPpc: for(auto II_=0;II_<D_MM_PPC_;++II_){
-#pragma HLS UNROLL
-            tmp[II_][JJ_][KK_*D_MM_PPC_+II_]=pix_(II_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,II_*D_COLOR_CHANNELS_*D_DEPTH_);
+            loopBlockColsPpcTmp: for(auto TT_=0;TT_<D_STRM_PPC_;++TT_){
+              tmp[TT_][JJ_][KK_*D_MM_PPC_+II_]=pix_(II_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,II_*D_COLOR_CHANNELS_*D_DEPTH_);
+            }
           }
         }
       }
@@ -107,6 +107,7 @@ static void Func2(
 
       loopBlockRows2: for(auto JJ_=0;JJ_<D_BLOCK_SIZE_;++JJ_){
         loopBlockCols2: for(auto KK_=0;KK_<(D_BLOCK_SIZE_/D_STRM_PPC_);++KK_){
+#pragma HLS PIPELINE II=1
           ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_PPC_>::Value> srcStreamPix_;
           ap_int<16*D_STRM_PPC_> srcXStream_;
           ap_int<16*D_STRM_PPC_> srcYStream_;
