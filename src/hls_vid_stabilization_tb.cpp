@@ -9,17 +9,17 @@
 #include <string>
 
 // GOLDEN
-cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, double angle, double scale) {
-    double alpha = scale * cos(angle * CV_PI / 180.0);
-    double beta = scale * sin(angle * CV_PI / 180.0);
+cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, float angle, float scale) {
+    float alpha = scale * cos(angle * CV_PI / 180.0);
+    float beta = scale * sin(angle * CV_PI / 180.0);
 
     cv::Mat rot_mat = cv::Mat::zeros(2, 3, CV_64F); //2x3 matrix oluşturuyoruz
-    rot_mat.at<double>(0, 0) = alpha;
-    rot_mat.at<double>(0, 1) = -beta;
-    rot_mat.at<double>(0, 2) = (1 - alpha) * center.x + beta * center.y;
-    rot_mat.at<double>(1, 0) = beta;
-    rot_mat.at<double>(1, 1) = alpha;
-    rot_mat.at<double>(1, 2) = (1 - alpha) * center.y - beta * center.x;
+    rot_mat.at<float>(0, 0) = alpha;
+    rot_mat.at<float>(0, 1) = -beta;
+    rot_mat.at<float>(0, 2) = (1 - alpha) * center.x + beta * center.y;
+    rot_mat.at<float>(1, 0) = beta;
+    rot_mat.at<float>(1, 1) = alpha;
+    rot_mat.at<float>(1, 2) = (1 - alpha) * center.y - beta * center.x;
 
     return rot_mat;
 }
@@ -35,14 +35,14 @@ int main()
   }
 
   // GOLDEN
-  double goldenscale = 1.0;
-  double goldenangle = 84.0;
+  float goldenscale = 1.0;
+  float goldenangle = -38.0;
 
   // Döndürme matrisi oluştur
   cv::Point2f goldencenter(imgBgr.cols / 2.0, imgBgr.rows / 2.0);
   cv::Mat M = goldenGetRotationMatrix2D(goldencenter, goldenangle, goldenscale);
   // Ek kaydırma (y ekseninde 10 piksel)
-  //M.at<double>(1, 2) += 100;
+  //M.at<float>(1, 2) += 100;
 
   cv::Mat imgOut;
   imgOut=cv::Mat(imgBgr.size(),imgBgr.type());
@@ -56,12 +56,12 @@ int main()
         }
       }
 
-      double srcX[32][32];
-      double srcY[32][32];
+      float srcX[32][32];
+      float srcY[32][32];
       for(auto J=0;J<32;++J){
         for(auto K=0;K<32;++K){
-          srcX[J][K] = M.at<double>(0, 0) * (K+x) + M.at<double>(0, 1) * (J+y) + M.at<double>(0, 2);
-          srcY[J][K] = M.at<double>(1, 0) * (K+x) + M.at<double>(1, 1) * (J+y) + M.at<double>(1, 2);
+          srcX[J][K] = M.at<float>(0, 0) * (K+x) + M.at<float>(0, 1) * (J+y) + M.at<float>(0, 2);
+          srcY[J][K] = M.at<float>(1, 0) * (K+x) + M.at<float>(1, 1) * (J+y) + M.at<float>(1, 2);
         }
       }
 
@@ -81,35 +81,35 @@ int main()
   cv::imwrite(rotatedImageGoldenStr,imgOut);
 
   // HLS
-  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> imgHls[(D_MAX_STRIDE_/D_PPC_)*(2*D_MAX_ROWS_)];
-  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> imgHlsDst[(D_MAX_STRIDE_/D_PPC_)*D_MAX_ROWS_];
+  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
+  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHlsDst[(D_MAX_STRIDE_/D_MM_PPC_)*D_MAX_ROWS_];
   for(auto J_=0;J_<2*imgBgr.rows;++J_){
     for(auto K_=0;K_<2*imgBgr.cols;++K_){
       imgHls[J_*imgBgr.cols+K_]=0;
     }
   }
   for(auto J_=0;J_<imgBgr.rows;++J_){
-    for(auto K_=0;K_<imgBgr.cols/D_PPC_;++K_){
-      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> hlsPix_;
-      for(auto Z_=0;Z_<D_PPC_;++Z_){
-        cv::Vec3b Pix_=imgBgr.at<cv::Vec3b>(J_,K_*D_PPC_+Z_);
+    for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
+      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
+      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
+        cv::Vec3b Pix_=imgBgr.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_);
         hlsPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+7,Z_*D_COLOR_CHANNELS_*D_DEPTH_+0)=Pix_[0];
         hlsPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+15,Z_*D_COLOR_CHANNELS_*D_DEPTH_+8)=Pix_[1];
         hlsPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+23,Z_*D_COLOR_CHANNELS_*D_DEPTH_+16)=Pix_[2];
       }
-      imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_PPC_)+(K_+D_COLS_MARGIN_/D_PPC_)]=hlsPix_;
+      imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)]=hlsPix_;
       imgHlsDst[J_*imgBgr.cols+K_]=0;
     }
   }
  
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width=imgBgr.cols;
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height=imgBgr.rows;
-  double M00_=M.at<double>(0,0);
-  double M01_=M.at<double>(0,1);
-  double M02_=M.at<double>(0,2);
-  double M10_=M.at<double>(1,0);
-  double M11_=M.at<double>(1,1);
-  double M12_=M.at<double>(1,2);
+  float M00_=M.at<float>(0,0);
+  float M01_=M.at<float>(0,1);
+  float M02_=M.at<float>(0,2);
+  float M10_=M.at<float>(1,0);
+  float M11_=M.at<float>(1,1);
+  float M12_=M.at<float>(1,2);
 #if 1
   D_TOP_(
     imgHls,
@@ -121,16 +121,15 @@ int main()
   );
   cv::Mat dstHlsImgOrig=cv::Mat(imgBgr.rows,imgBgr.cols,CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
-    for(auto K_=0;K_<(imgBgr.cols/D_PPC_);++K_){
-      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> imgHlsDstPix_;
-      //imgHlsDstPix_=imgHls[(J_+imgBgr.rows/2)*(D_MAX_STRIDE_/D_PPC_)+(K_+imgBgr.cols/2)];
-      imgHlsDstPix_=imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_PPC_)+(K_+D_COLS_MARGIN_/D_PPC_)];
-      for(auto Z_=0;Z_<D_PPC_;++Z_){
+    for(auto K_=0;K_<(imgBgr.cols/D_MM_PPC_);++K_){
+      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHlsDstPix_;
+      imgHlsDstPix_=imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)];
+      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
         cv::Vec3b pix_;
         pix_[0]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+7,Z_*D_COLOR_CHANNELS_*D_DEPTH_+0);
         pix_[1]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+15,Z_*D_COLOR_CHANNELS_*D_DEPTH_+8);
         pix_[2]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+23,Z_*D_COLOR_CHANNELS_*D_DEPTH_+16);
-        dstHlsImgOrig.at<cv::Vec3b>(J_,K_*D_PPC_+Z_)=pix_;
+        dstHlsImgOrig.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=pix_;
       }
     }
   }
@@ -138,15 +137,15 @@ int main()
 
   cv::Mat dstHlsImg=cv::Mat(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
-    for(auto K_=0;K_<imgBgr.cols/D_PPC_;++K_){
-      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_PPC_> imgHlsDstPix_;
-      imgHlsDstPix_=imgHlsDst[J_*(D_MAX_STRIDE_/D_PPC_)+K_];
-      for(auto Z_=0;Z_<D_PPC_;++Z_){
+    for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
+      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHlsDstPix_;
+      imgHlsDstPix_=imgHlsDst[J_*(D_MAX_STRIDE_/D_MM_PPC_)+K_];
+      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
         cv::Vec3b pix_;
         pix_[0]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+7,Z_*D_COLOR_CHANNELS_*D_DEPTH_+0);
         pix_[1]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+15,Z_*D_COLOR_CHANNELS_*D_DEPTH_+8);
         pix_[2]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+23,Z_*D_COLOR_CHANNELS_*D_DEPTH_+16);
-        dstHlsImg.at<cv::Vec3b>(J_,K_*D_PPC_+Z_)=pix_;
+        dstHlsImg.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=pix_;
       }
     }
   }
