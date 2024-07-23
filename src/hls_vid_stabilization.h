@@ -12,6 +12,8 @@ void D_TOP_
 (
   ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> srcAxi[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)],
   ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstAxi[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)],
+  ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram[D_MAX_ROWS_][D_MAX_COLS_/D_MM_PPC_],
+  ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram2[D_MAX_ROWS_][D_MAX_COLS_/D_MM_PPC_],
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> >& srcStream,
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> >& dstStream,
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> width,

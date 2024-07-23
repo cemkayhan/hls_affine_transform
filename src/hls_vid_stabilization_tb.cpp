@@ -129,11 +129,16 @@ int main()
   fp_struct<float> M11_=fp_struct<float>(M.at<float>(1,1));
   fp_struct<float> M12_=fp_struct<float>(M.at<float>(1,2));
 
+  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram_[D_MAX_ROWS_][D_MAX_COLS_/D_MM_PPC_];
+  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram2_[D_MAX_ROWS_][D_MAX_COLS_/D_MM_PPC_];
+
 #if 1
 #if 1
   D_TOP_(
     imgHls,
     imgHls2,
+    dstBram_,
+    dstBram2_,
     srcStream,
     dstStream,
     Width,
