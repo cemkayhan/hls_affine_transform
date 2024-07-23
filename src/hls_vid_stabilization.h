@@ -16,8 +16,8 @@ void D_TOP_
   ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstAxi[(D_MAX_STRIDE_/D_MM_PPC_)*D_MAX_ROWS_],
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height,
-  float rotMat00, float rotMat01, float rotMat02,
-  float rotMat10, float rotMat11, float rotMat12
+  ap_uint<32> rotMat00, ap_uint<32> rotMat01, ap_uint<32> rotMat02,
+  ap_uint<32> rotMat10, ap_uint<32> rotMat11, ap_uint<32> rotMat12
 );
 
 #endif

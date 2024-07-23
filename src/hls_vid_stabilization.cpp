@@ -7,10 +7,17 @@ static void Func1(
   hls::stream<ap_int<16*D_STRM_PPC_>>& srcYStream,
   hls::stream<ap_int<16>>& topLeftX,
   hls::stream<ap_int<16>>& topLeftY,
-  float rotMat00, float rotMat01, float rotMat02,
-  float rotMat10, float rotMat11, float rotMat12
+  ap_uint<32> rotMat00, ap_uint<32> rotMat01, ap_uint<32> rotMat02,
+  ap_uint<32> rotMat10, ap_uint<32> rotMat11, ap_uint<32> rotMat12
 ){
 #pragma HLS INLINE off
+
+  const auto rotMat00_ {fp_struct<float> {rotMat00}};
+  const auto rotMat01_ {fp_struct<float> {rotMat01}};
+  const auto rotMat02_ {fp_struct<float> {rotMat02}};
+  const auto rotMat10_ {fp_struct<float> {rotMat10}};
+  const auto rotMat11_ {fp_struct<float> {rotMat11}};
+  const auto rotMat12_ {fp_struct<float> {rotMat12}};
 
   loopRows: for(auto J_=0;J_<Height;J_+=D_BLOCK_SIZE_){
 #pragma HLS LOOP_TRIPCOUNT min=D_MAX_ROWS_/D_BLOCK_SIZE_ max=D_MAX_ROWS_/D_BLOCK_SIZE_
@@ -30,8 +37,8 @@ static void Func1(
           for(auto II_=0;II_<D_STRM_PPC_;++II_){
 #pragma HLS PIPELINE II=1
 
-            SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat00*((KK_*D_STRM_PPC_+II_)+K_)+rotMat01*(JJ_+J_)+rotMat02);
-            SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat10*((KK_*D_STRM_PPC_+II_)+K_)+rotMat11*(JJ_+J_)+rotMat12);
+            SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat00_.to_float()*((KK_*D_STRM_PPC_+II_)+K_)+rotMat01_.to_float()*(JJ_+J_)+rotMat02_.to_float());
+            SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat10_.to_float()*((KK_*D_STRM_PPC_+II_)+K_)+rotMat11_.to_float()*(JJ_+J_)+rotMat12_.to_float());
             if(!topLeftXSet_){
               topLeftXSet_=true;
               topLeftX_=SrcX_(II_*16+15,II_*16);
@@ -162,8 +169,8 @@ void D_TOP_
   ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstAxi[(D_MAX_STRIDE_/D_MM_PPC_)*D_MAX_ROWS_],
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> height,
-  float rotMat00, float rotMat01, float rotMat02,
-  float rotMat10, float rotMat11, float rotMat12
+  ap_uint<32> rotMat00, ap_uint<32> rotMat01, ap_uint<32> rotMat02,
+  ap_uint<32> rotMat10, ap_uint<32> rotMat11, ap_uint<32> rotMat12
 ){
 #pragma HLS INTERFACE m_axi port=srcAxi bundle=srcaxi depth=(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)
 #pragma HLS INTERFACE m_axi port=dstAxi bundle=dstaxi depth=(D_MAX_STRIDE_/D_MM_PPC_)*D_MAX_ROWS_

@@ -27,7 +27,7 @@ cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, float angle, float scale) 
 
 int main()
 {
-  cv::Mat imgBgr = cv::imread("/tmp/image.png");
+  cv::Mat imgBgr = cv::imread("/tmp/image640x512.png");
 
   if(imgBgr.empty()){
     std::cout << "Failed to read image \n";
@@ -36,7 +36,7 @@ int main()
 
   // GOLDEN
   float goldenscale = 1.0;
-  float goldenangle = -29.0;
+  float goldenangle = 69.0;
 
   // Döndürme matrisi oluştur
   cv::Point2f goldencenter(imgBgr.cols / 2.0, imgBgr.rows / 2.0);
@@ -104,20 +104,20 @@ int main()
  
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width=imgBgr.cols;
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height=imgBgr.rows;
-  float M00_=M.at<float>(0,0);
-  float M01_=M.at<float>(0,1);
-  float M02_=M.at<float>(0,2);
-  float M10_=M.at<float>(1,0);
-  float M11_=M.at<float>(1,1);
-  float M12_=M.at<float>(1,2);
+  fp_struct<float> M00_=fp_struct<float>(M.at<float>(0,0));
+  fp_struct<float> M01_=fp_struct<float>(M.at<float>(0,1));
+  fp_struct<float> M02_=fp_struct<float>(M.at<float>(0,2));
+  fp_struct<float> M10_=fp_struct<float>(M.at<float>(1,0));
+  fp_struct<float> M11_=fp_struct<float>(M.at<float>(1,1));
+  fp_struct<float> M12_=fp_struct<float>(M.at<float>(1,2));
 #if 1
   D_TOP_(
     imgHls,
     imgHlsDst,
     Width,
     Height,
-    M00_,M01_,M02_,
-    M10_,M11_,M12_
+    M00_.data(),M01_.data(),M02_.data(),
+    M10_.data(),M11_.data(),M12_.data()
   );
   cv::Mat dstHlsImgOrig=cv::Mat(imgBgr.rows,imgBgr.cols,CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
