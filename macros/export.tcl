@@ -2,6 +2,7 @@ set target export
 
 source open_project.tcl
 source common_cflags.tcl
+source common_csynthflags.tcl
 source add_files.tcl
 
 source config_rtl.tcl

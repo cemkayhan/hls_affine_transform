@@ -1,6 +1,9 @@
 #!/bin/sh
 
+D_ENABLE_HLS_CSIM_OBSOLETE_=$(grep D_ENABLE_HLS_CSIM_OBSOLETE_= ../CSIMFLAGS|cut -d'=' -f2)
+
 CSIMFLAGS=""
+CSIMFLAGS="$CSIMFLAGS -DD_ENABLE_HLS_CSIM_OBSOLETE_=$D_ENABLE_HLS_CSIM_OBSOLETE_"
 
 while read LINE; do
   if [[ "$LINE" =~ ^-I/ ]]; then

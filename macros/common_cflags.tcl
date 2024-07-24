@@ -1,5 +1,7 @@
 set common_cflags {}
 #lappend common_cflags {-O3}
+#lappend common_cflags {-O0}
+#lappend common_cflags {-g}
 #lappend common_cflags {-std=c++14}
 lappend common_cflags {-Wall}
 lappend common_cflags {-Wextra}

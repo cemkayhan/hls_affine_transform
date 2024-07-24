@@ -1,2 +1,3 @@
 -I/usr/local/opencv4.4.0/include/opencv4
 -I/usr/local/opencv4.4.0/include/opencv4/opencv2
+D_ENABLE_HLS_CSIM_OBSOLETE_=0

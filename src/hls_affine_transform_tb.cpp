@@ -81,21 +81,21 @@ int main()
   cv::imwrite(rotatedImageGoldenStr,imgOut);
 
   // HLS
-  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
-  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
+  static ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
+  static ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
 
-  hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> > srcStream("srcStream");
-  hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> > dstStream("dstStream");
+  hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> > srcStream("srcStream");
+  hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> > dstStream("dstStream");
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_STRM_IN_PPC_;++K_){
-      ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> srcStreamPix_;
+      ap_axiu<Axi_Vid_Bus_Width<D_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> srcStreamPix_;
       for(auto Z_=0;Z_<D_STRM_IN_PPC_;++Z_){
         cv::Vec3b cvPix_=imgBgr.at<cv::Vec3b>(J_,K_*D_STRM_IN_PPC_+Z_);
-        ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> pix_;
+        ap_uint<Axi_Vid_Bus_Width<D_CHANNELS_,D_DEPTH_,1>::Value> pix_;
         pix_(7,0)=cvPix_[0];
         pix_(15,8)=cvPix_[1];
         pix_(23,16)=cvPix_[2];
-        srcStreamPix_.data(Z_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,Z_*D_COLOR_CHANNELS_*D_DEPTH_)=pix_;
+        srcStreamPix_.data(Z_*D_CHANNELS_*D_DEPTH_+D_CHANNELS_*D_DEPTH_-1,Z_*D_CHANNELS_*D_DEPTH_)=pix_;
       }
       srcStream<<srcStreamPix_;
     }
@@ -103,12 +103,12 @@ int main()
 
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
-      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
+      ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
       for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
         cv::Vec3b Pix_=imgBgr.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_);
-        hlsPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+7,Z_*D_COLOR_CHANNELS_*D_DEPTH_+0)=Pix_[0];
-        hlsPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+15,Z_*D_COLOR_CHANNELS_*D_DEPTH_+8)=Pix_[1];
-        hlsPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+23,Z_*D_COLOR_CHANNELS_*D_DEPTH_+16)=Pix_[2];
+        hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+7,Z_*D_CHANNELS_*D_DEPTH_+0)=Pix_[0];
+        hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+15,Z_*D_CHANNELS_*D_DEPTH_+8)=Pix_[1];
+        hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+23,Z_*D_CHANNELS_*D_DEPTH_+16)=Pix_[2];
       }
       imgHls2[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)]=hlsPix_;
     }
@@ -123,13 +123,26 @@ int main()
   fp_struct<float> M11_=fp_struct<float>(M.at<float>(1,1));
   fp_struct<float> M12_=fp_struct<float>(M.at<float>(1,2));
 
-  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram_[D_MAX_ROWS_][D_MAX_COLS_/D_MM_PPC_];
+  static ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram_[D_MAX_ROWS_*(D_MAX_COLS_/D_MM_PPC_)];
+  static ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram2_[D_MAX_ROWS_*(D_MAX_COLS_/D_MM_PPC_)];
+  for(auto J_=0;J_<imgOut.rows;++J_){
+    for(auto K_=0;K_<imgOut.cols/D_MM_PPC_;++K_){
+      ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
+      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
+        cv::Vec3b Pix_=imgOut.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_);
+        hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+7,Z_*D_CHANNELS_*D_DEPTH_+0)=Pix_[0];
+        hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+15,Z_*D_CHANNELS_*D_DEPTH_+8)=Pix_[1];
+        hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+23,Z_*D_CHANNELS_*D_DEPTH_+16)=Pix_[2];
+      }
+      dstBram2_[J_*(D_MAX_COLS_/D_MM_PPC_)+K_]=hlsPix_;
+    }
+  }
 
   D_TOP_(
     imgHls,
     imgHls2,
     dstBram_,
-    dstBram_,
+    dstBram2_,
     srcStream,
     dstStream,
     Width,
@@ -138,15 +151,63 @@ int main()
     M10_.data(),M11_.data(),M12_.data()
   );
 
+  cv::Mat cvImgHlsOut_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
+  for(auto J_=0;J_<imgBgr.rows;++J_){
+    for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
+      ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
+      hlsPix_=imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)];
+      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
+        cv::Vec3b cvPix_;
+        cvPix_[0]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+7,Z_*D_CHANNELS_*D_DEPTH_+0);
+        cvPix_[1]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+15,Z_*D_CHANNELS_*D_DEPTH_+8);
+        cvPix_[2]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+23,Z_*D_CHANNELS_*D_DEPTH_+16);
+        cvImgHlsOut_.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=cvPix_;
+      }
+    }
+  }
+  cv::imwrite("imgHlsOut.png",cvImgHlsOut_);
+
+  cv::Mat cvImgDstBramOut_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
+  for(auto J_=0;J_<imgBgr.rows;++J_){
+    for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
+      ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
+      hlsPix_=dstBram_[(J_)*(D_MAX_COLS_/D_MM_PPC_)+K_];
+      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
+        cv::Vec3b cvPix_;
+        cvPix_[0]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+7,Z_*D_CHANNELS_*D_DEPTH_+0);
+        cvPix_[1]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+15,Z_*D_CHANNELS_*D_DEPTH_+8);
+        cvPix_[2]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+23,Z_*D_CHANNELS_*D_DEPTH_+16);
+        cvImgDstBramOut_.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=cvPix_;
+      }
+    }
+  }
+  cv::imwrite("imgDstBramOut.png",cvImgDstBramOut_);
+
+  cv::Mat cvImgDstBram2Out_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
+  for(auto J_=0;J_<imgBgr.rows;++J_){
+    for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
+      ap_uint<D_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
+      hlsPix_=dstBram2_[(J_)*(D_MAX_COLS_/D_MM_PPC_)+K_];
+      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
+        cv::Vec3b cvPix_;
+        cvPix_[0]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+7,Z_*D_CHANNELS_*D_DEPTH_+0);
+        cvPix_[1]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+15,Z_*D_CHANNELS_*D_DEPTH_+8);
+        cvPix_[2]=hlsPix_(Z_*D_CHANNELS_*D_DEPTH_+23,Z_*D_CHANNELS_*D_DEPTH_+16);
+        cvImgDstBram2Out_.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=cvPix_;
+      }
+    }
+  }
+  cv::imwrite("imgDstBram2Out.png",cvImgDstBram2Out_);
+
   cv::Mat imgBgrNewOut_;
   imgBgrNewOut_=cv::Mat(imgBgr.size(),imgBgr.type());
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_STRM_OUT_PPC_;++K_){
-      ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> dstStreamPix_;
+      ap_axiu<Axi_Vid_Bus_Width<D_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> dstStreamPix_;
       dstStream>>dstStreamPix_;
       for(auto Z_=0;Z_<D_STRM_OUT_PPC_;++Z_){
-        ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> pix_;
-        pix_=dstStreamPix_.data(Z_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,Z_*D_COLOR_CHANNELS_*D_DEPTH_);
+        ap_uint<Axi_Vid_Bus_Width<D_CHANNELS_,D_DEPTH_,1>::Value> pix_;
+        pix_=dstStreamPix_.data(Z_*D_CHANNELS_*D_DEPTH_+D_CHANNELS_*D_DEPTH_-1,Z_*D_CHANNELS_*D_DEPTH_);
         cv::Vec3b cvPix_=imgBgr.at<cv::Vec3b>(J_,K_*D_STRM_IN_PPC_+Z_);
         cvPix_[0]=pix_(7,0);
         cvPix_[1]=pix_(15,8);
@@ -155,7 +216,7 @@ int main()
       }
     }
   }
-  cv::imwrite("imgBgrNewOut.png",imgBgrNewOut_);
+  cv::imwrite("hls.png",imgBgrNewOut_);
 
   return 0;
 }
