@@ -36,7 +36,7 @@ int main()
 
   // GOLDEN
   float goldenscale = 1.0;
-  float goldenangle = -29.0;
+  float goldenangle = 129.0;
 
   // Döndürme matrisi oluştur
   cv::Point2f goldencenter(imgBgr.cols / 2.0, imgBgr.rows / 2.0);
@@ -148,12 +148,14 @@ int main()
   );
 #endif
 
+  std::ofstream ofs_ {"mylastlog.txt"};
   cv::Mat imgBgrNewOut_;
   imgBgrNewOut_=cv::Mat(imgBgr.size(),imgBgr.type());
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_STRM_OUT_PPC_;++K_){
       ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> dstStreamPix_;
       dstStream>>dstStreamPix_;
+      ofs_<<"J_: "<<J_<<", K_: "<<K_<<", user: "<<dstStreamPix_.user<<", last: "<<dstStreamPix_.last<<'\n';
       for(auto Z_=0;Z_<D_STRM_OUT_PPC_;++Z_){
         ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> pix_;
         pix_=dstStreamPix_.data(Z_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,Z_*D_COLOR_CHANNELS_*D_DEPTH_);
