@@ -1,4 +1,4 @@
-#include "hls_vid_stabilization.h"
+#include "hls_affine_transform.h"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -83,12 +83,6 @@ int main()
   // HLS
   static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
   static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
-  //for(auto J_=0;J_<2*imgBgr.rows;++J_){
-  //  for(auto K_=0;K_<2*imgBgr.cols;++K_){
-  //    imgHls[J_*imgBgr.cols+K_]=0;
-  //    imgHls2[J_*imgBgr.cols+K_]=0;
-  //  }
-  //}
 
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> > srcStream("srcStream");
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> > dstStream("dstStream");
@@ -130,15 +124,12 @@ int main()
   fp_struct<float> M12_=fp_struct<float>(M.at<float>(1,2));
 
   static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram_[D_MAX_ROWS_][D_MAX_COLS_/D_MM_PPC_];
-  static ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram2_[D_MAX_ROWS_][D_MAX_COLS_/D_MM_PPC_];
 
-#if 1
-#if 1
   D_TOP_(
     imgHls,
     imgHls2,
     dstBram_,
-    dstBram2_,
+    dstBram_,
     srcStream,
     dstStream,
     Width,
@@ -146,16 +137,13 @@ int main()
     M00_.data(),M01_.data(),M02_.data(),
     M10_.data(),M11_.data(),M12_.data()
   );
-#endif
 
-  std::ofstream ofs_ {"mylastlog.txt"};
   cv::Mat imgBgrNewOut_;
   imgBgrNewOut_=cv::Mat(imgBgr.size(),imgBgr.type());
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_STRM_OUT_PPC_;++K_){
       ap_axiu<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> dstStreamPix_;
       dstStream>>dstStreamPix_;
-      ofs_<<"J_: "<<J_<<", K_: "<<K_<<", user: "<<dstStreamPix_.user<<", last: "<<dstStreamPix_.last<<'\n';
       for(auto Z_=0;Z_<D_STRM_OUT_PPC_;++Z_){
         ap_uint<Axi_Vid_Bus_Width<D_COLOR_CHANNELS_,D_DEPTH_,1>::Value> pix_;
         pix_=dstStreamPix_.data(Z_*D_COLOR_CHANNELS_*D_DEPTH_+D_COLOR_CHANNELS_*D_DEPTH_-1,Z_*D_COLOR_CHANNELS_*D_DEPTH_);
@@ -168,39 +156,6 @@ int main()
     }
   }
   cv::imwrite("imgBgrNewOut.png",imgBgrNewOut_);
-
-  cv::Mat dstHlsImgOrig=cv::Mat(imgBgr.rows,imgBgr.cols,CV_8UC3);
-  for(auto J_=0;J_<imgBgr.rows;++J_){
-    for(auto K_=0;K_<(imgBgr.cols/D_MM_PPC_);++K_){
-      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHlsDstPix_;
-      imgHlsDstPix_=imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)];
-      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
-        cv::Vec3b pix_;
-        pix_[0]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+7,Z_*D_COLOR_CHANNELS_*D_DEPTH_+0);
-        pix_[1]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+15,Z_*D_COLOR_CHANNELS_*D_DEPTH_+8);
-        pix_[2]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+23,Z_*D_COLOR_CHANNELS_*D_DEPTH_+16);
-        dstHlsImgOrig.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=pix_;
-      }
-    }
-  }
-  cv::imwrite("imgHls.png",dstHlsImgOrig);
-
-  cv::Mat dstHlsImg=cv::Mat(imgBgr.size(),CV_8UC3);
-  for(auto J_=0;J_<imgBgr.rows;++J_){
-    for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
-      ap_uint<D_COLOR_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHlsDstPix_;
-      imgHlsDstPix_=imgHls2[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)];
-      for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
-        cv::Vec3b pix_;
-        pix_[0]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+7,Z_*D_COLOR_CHANNELS_*D_DEPTH_+0);
-        pix_[1]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+15,Z_*D_COLOR_CHANNELS_*D_DEPTH_+8);
-        pix_[2]=imgHlsDstPix_(Z_*D_COLOR_CHANNELS_*D_DEPTH_+23,Z_*D_COLOR_CHANNELS_*D_DEPTH_+16);
-        dstHlsImg.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=pix_;
-      }
-    }
-  }
-  cv::imwrite("imgHls2.png",dstHlsImg);
-#endif
 
   return 0;
 }
