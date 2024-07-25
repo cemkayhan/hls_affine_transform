@@ -115,12 +115,12 @@ int main()
  
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width=imgBgr.cols;
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height=imgBgr.rows;
-  fp_struct<float> M00_=fp_struct<float>(M.at<float>(0,0));
-  fp_struct<float> M01_=fp_struct<float>(M.at<float>(0,1));
-  fp_struct<float> M02_=fp_struct<float>(M.at<float>(0,2));
-  fp_struct<float> M10_=fp_struct<float>(M.at<float>(1,0));
-  fp_struct<float> M11_=fp_struct<float>(M.at<float>(1,1));
-  fp_struct<float> M12_=fp_struct<float>(M.at<float>(1,2));
+  fp_struct<D_FP_T_> M00_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,0)));
+  fp_struct<D_FP_T_> M01_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,1)));
+  fp_struct<D_FP_T_> M02_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,2)));
+  fp_struct<D_FP_T_> M10_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(1,0)));
+  fp_struct<D_FP_T_> M11_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(1,1)));
+  fp_struct<D_FP_T_> M12_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(1,2)));
 
   static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram_[D_MAX_ROWS_*(D_MAX_COLS_/D_MM_PPC_)];
   static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram2_[D_MAX_ROWS_*(D_MAX_COLS_/D_MM_PPC_)];

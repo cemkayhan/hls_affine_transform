@@ -114,8 +114,6 @@ static void Func1(
           for(auto II_=0;II_<STRM_INTR_PPC_;++II_){
 #pragma HLS PIPELINE II=1
 
-            //SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat00_.to_float()*((KK_*STRM_INTR_PPC_+II_)+K_)+rotMat01_.to_float()*(JJ_+J_)+rotMat02_.to_float());
-            //SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat10_.to_float()*((KK_*STRM_INTR_PPC_+II_)+K_)+rotMat11_.to_float()*(JJ_+J_)+rotMat12_.to_float());
             SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(Fpt_Func(rotMat00)*((KK_*STRM_INTR_PPC_+II_)+K_)+Fpt_Func(rotMat01)*(JJ_+J_)+Fpt_Func(rotMat02));
             SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(Fpt_Func(rotMat10)*((KK_*STRM_INTR_PPC_+II_)+K_)+Fpt_Func(rotMat11)*(JJ_+J_)+Fpt_Func(rotMat12));
             if(!topLeftXSet_){
