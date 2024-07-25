@@ -83,7 +83,7 @@ static void Func0(
   }
 }
 
-template<int MAX_COLS_,int MAX_ROWS_,int STRM_INTR_PPC_,int BLOCK_SIZE_>
+template<typename FP_T_,int MAX_COLS_,int MAX_ROWS_,int STRM_INTR_PPC_,int BLOCK_SIZE_>
 static void Func1(
   ap_uint<Bit_Width<MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Height,
@@ -91,17 +91,10 @@ static void Func1(
   hls::stream<ap_int<16*STRM_INTR_PPC_>>& srcYStream,
   hls::stream<ap_int<16>>& topLeftX,
   hls::stream<ap_int<16>>& topLeftY,
-  ap_uint<32> rotMat00, ap_uint<32> rotMat01, ap_uint<32> rotMat02,
-  ap_uint<32> rotMat10, ap_uint<32> rotMat11, ap_uint<32> rotMat12
+  ap_uint<Type_Width<FP_T_>::Value> rotMat00, ap_uint<Type_Width<FP_T_>::Value> rotMat01, ap_uint<Type_Width<FP_T_>::Value> rotMat02,
+  ap_uint<Type_Width<FP_T_>::Value> rotMat10, ap_uint<Type_Width<FP_T_>::Value> rotMat11, ap_uint<Type_Width<FP_T_>::Value> rotMat12
 ){
 #pragma HLS INLINE off
-
-  const auto rotMat00_ {fp_struct<float> {rotMat00}};
-  const auto rotMat01_ {fp_struct<float> {rotMat01}};
-  const auto rotMat02_ {fp_struct<float> {rotMat02}};
-  const auto rotMat10_ {fp_struct<float> {rotMat10}};
-  const auto rotMat11_ {fp_struct<float> {rotMat11}};
-  const auto rotMat12_ {fp_struct<float> {rotMat12}};
 
   loopRows: for(auto J_=0;J_<Height;J_+=BLOCK_SIZE_){
 #pragma HLS LOOP_TRIPCOUNT min=MAX_ROWS_/BLOCK_SIZE_ max=MAX_ROWS_/BLOCK_SIZE_
@@ -121,8 +114,10 @@ static void Func1(
           for(auto II_=0;II_<STRM_INTR_PPC_;++II_){
 #pragma HLS PIPELINE II=1
 
-            SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat00_.to_float()*((KK_*STRM_INTR_PPC_+II_)+K_)+rotMat01_.to_float()*(JJ_+J_)+rotMat02_.to_float());
-            SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat10_.to_float()*((KK_*STRM_INTR_PPC_+II_)+K_)+rotMat11_.to_float()*(JJ_+J_)+rotMat12_.to_float());
+            //SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat00_.to_float()*((KK_*STRM_INTR_PPC_+II_)+K_)+rotMat01_.to_float()*(JJ_+J_)+rotMat02_.to_float());
+            //SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(rotMat10_.to_float()*((KK_*STRM_INTR_PPC_+II_)+K_)+rotMat11_.to_float()*(JJ_+J_)+rotMat12_.to_float());
+            SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(Fpt_Func(rotMat00)*((KK_*STRM_INTR_PPC_+II_)+K_)+Fpt_Func(rotMat01)*(JJ_+J_)+Fpt_Func(rotMat02));
+            SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(Fpt_Func(rotMat10)*((KK_*STRM_INTR_PPC_+II_)+K_)+Fpt_Func(rotMat11)*(JJ_+J_)+Fpt_Func(rotMat12));
             if(!topLeftXSet_){
               topLeftXSet_=true;
               topLeftX_=SrcX_(II_*16+15,II_*16);
@@ -264,8 +259,8 @@ void D_TOP_
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> height,
 
-  ap_uint<32> rotMat00, ap_uint<32> rotMat01, ap_uint<32> rotMat02,
-  ap_uint<32> rotMat10, ap_uint<32> rotMat11, ap_uint<32> rotMat12
+  ap_uint<Type_Width<D_FP_T_>::Value> rotMat00, ap_uint<Type_Width<D_FP_T_>::Value> rotMat01, ap_uint<Type_Width<D_FP_T_>::Value> rotMat02,
+  ap_uint<Type_Width<D_FP_T_>::Value> rotMat10, ap_uint<Type_Width<D_FP_T_>::Value> rotMat11, ap_uint<Type_Width<D_FP_T_>::Value> rotMat12
 ){
 #pragma HLS INTERFACE m_axi port=vidWrAxi offset=slave bundle=vidwraxibnd num_read_outstanding=1 max_read_burst_length=2   depth=(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)
 #pragma HLS INTERFACE m_axi port=affRdAxi offset=slave bundle=affrdaxibnd num_write_outstanding=1 max_write_burst_length=2 depth=(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)
@@ -328,7 +323,7 @@ void D_TOP_
   );
 
   //
-  Func1<D_MAX_COLS_,D_MAX_ROWS_,D_STRM_INTR_PPC_,D_BLOCK_SIZE_>(
+  Func1<D_FP_T_,D_MAX_COLS_,D_MAX_ROWS_,D_STRM_INTR_PPC_,D_BLOCK_SIZE_>(
     width_,
     height_,
     srcXStream_,

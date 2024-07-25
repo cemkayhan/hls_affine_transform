@@ -5,8 +5,11 @@
 #include "ap_axi_sdata.h"
 #include "hls_stream.h"
 #include "axi_vid_bus_width.h"
-#include "bit_width.h"
 #include "utils/x_hls_utils.h"
+
+#include "bit_width.h"
+#include "type_width.h"
+#include "fpt_func.h"
 
 void D_TOP_
 (
@@ -21,8 +24,8 @@ void D_TOP_
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> height,
 
-  ap_uint<32> rotMat00, ap_uint<32> rotMat01, ap_uint<32> rotMat02,
-  ap_uint<32> rotMat10, ap_uint<32> rotMat11, ap_uint<32> rotMat12
+  ap_uint<Type_Width<D_FP_T_>::Value> rotMat00, ap_uint<Type_Width<D_FP_T_>::Value> rotMat01, ap_uint<Type_Width<D_FP_T_>::Value> rotMat02,
+  ap_uint<Type_Width<D_FP_T_>::Value> rotMat10, ap_uint<Type_Width<D_FP_T_>::Value> rotMat11, ap_uint<Type_Width<D_FP_T_>::Value> rotMat12
 );
 
 #endif

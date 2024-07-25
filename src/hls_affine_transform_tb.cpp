@@ -27,7 +27,7 @@ cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, float angle, float scale) 
 
 int main()
 {
-  cv::Mat imgBgr = cv::imread("/tmp/image"+std::to_string(D_MAX_COLS_)+"x"+std::to_string(D_MAX_ROWS_)+".png");
+  cv::Mat imgBgr = cv::imread("/tmp/image.png");
 
   if(imgBgr.empty()){
     std::cout << "Failed to read image \n";
