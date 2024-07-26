@@ -1,10 +1,58 @@
 #include "hls_affine_transform.h"
 
-template<int MM_CHANNELS_,int STRM_OUT_CHANNELS_,int DEPTH_,int MM_PPC_,int MAX_ROWS_,int MAX_COLS_,int STRM_OUT_PPC_,int BLOCK_SIZE_>
-static void Func4(
-  ap_uint<MM_CHANNELS_*DEPTH_*MM_PPC_> dstBram[(D_MAX_COLS_/D_MM_PPC_)*(D_MAX_ROWS_)],
-  hls::stream<bool>& dstBramTrigger,
+#include <fstream>
+#include <assert.h>
+
+template<int STRM_OUT_CHANNELS_,int DEPTH_,int STRM_OUT_PPC_,int MAX_COLS_,int MAX_ROWS_>
+static void Func5(
+  hls::stream<ap_uint<Axi_Vid_Bus_Width<STRM_OUT_CHANNELS_,DEPTH_,STRM_OUT_PPC_>::Value> >& dstLocalStream,
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<STRM_OUT_CHANNELS_,DEPTH_,STRM_OUT_PPC_>::Value,1,1,1> >& dstStream,
+
+  ap_uint<Bit_Width<MAX_COLS_>::Value> width,
+  ap_uint<Bit_Width<MAX_ROWS_>::Value> height,
+
+  ap_uint<Bit_Width<MAX_COLS_>::Value> padWidth,
+  ap_uint<Bit_Width<MAX_ROWS_>::Value> padHeight
+){
+#pragma HLS INLINE OFF
+
+  loopRows: for(auto J_=0;J_<padHeight;++J_)
+#pragma HLS LOOP_TRIPCOUNT min=MAX_ROWS_ max=MAX_ROWS_
+
+    loopCols: for(auto K_=0;K_<padWidth;K_+=STRM_OUT_PPC_){
+#pragma HLS LOOP_TRIPCOUNT min=MAX_COLS_/STRM_OUT_PPC_ max=MAX_COLS_/STRM_OUT_PPC_
+#pragma HLS PIPELINE II=1
+
+    ap_uint<Axi_Vid_Bus_Width<STRM_OUT_CHANNELS_,DEPTH_,STRM_OUT_PPC_>::Value> dstLocalStreamPix_;
+    dstLocalStream>>dstLocalStreamPix_;
+
+    ap_axiu<Axi_Vid_Bus_Width<STRM_OUT_CHANNELS_,DEPTH_,STRM_OUT_PPC_>::Value,1,1,1> dstStreamPix_;
+    dstStreamPix_.keep=-1;
+    dstStreamPix_.strb=-1;
+    dstStreamPix_.data=dstLocalStreamPix_;
+
+    if(0==J_&&0==K_){
+      dstStreamPix_.user=1;
+      dstStreamPix_.last=0;
+    } else if (K_==(padWidth-STRM_OUT_PPC_)) {
+      dstStreamPix_.user=0;
+      dstStreamPix_.last=1;
+    } else {
+      dstStreamPix_.user=0;
+      dstStreamPix_.last=0;
+    }
+    
+    if(J_<height&&K_<width){
+      dstStream<<dstStreamPix_;
+    }
+  }
+}
+
+template<int DSTBRAM_DEPTH_,int MM_CHANNELS_,int STRM_OUT_CHANNELS_,int DEPTH_,int MM_PPC_,int MAX_ROWS_,int MAX_COLS_,int MAX_STRIDE_,int STRM_OUT_PPC_,int BLOCK_SIZE_>
+static void Func4(
+  ap_uint<MM_CHANNELS_*DEPTH_*MM_PPC_> dstBram[DSTBRAM_DEPTH_],
+  hls::stream<bool>& dstBramTrigger,
+  hls::stream<ap_uint<Axi_Vid_Bus_Width<STRM_OUT_CHANNELS_,DEPTH_,STRM_OUT_PPC_>::Value> >& dstStream,
   ap_uint<Bit_Width<MAX_COLS_>::Value> width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> height
 ){
@@ -24,25 +72,13 @@ static void Func4(
 #pragma HLS PIPELINE II=MM_PPC_/STRM_OUT_PPC_
 
           ap_uint<MM_CHANNELS_*DEPTH_*MM_PPC_> dstBramPix_;
-          dstBramPix_=dstBram[(JJ_+J_)*(MAX_COLS_/MM_PPC_)+(K_/MM_PPC_)+KK_];
+          dstBramPix_=dstBram[(JJ_+J_)*(MAX_STRIDE_/MM_PPC_)+(K_/MM_PPC_)+KK_];
           loopBlockColsPpc: for(auto II_=0;II_<(MM_PPC_/STRM_OUT_PPC_);++II_){
-            ap_axiu<Axi_Vid_Bus_Width<STRM_OUT_CHANNELS_,DEPTH_,STRM_OUT_PPC_>::Value,1,1,1> dstStreamPix_;
+            ap_uint<Axi_Vid_Bus_Width<STRM_OUT_CHANNELS_,DEPTH_,STRM_OUT_PPC_>::Value> dstStreamPix_;
             ap_uint<MM_CHANNELS_*DEPTH_*STRM_OUT_PPC_> dstBramPix2_;
             dstBramPix2_=dstBramPix_(II_*STRM_OUT_PPC_*MM_CHANNELS_*DEPTH_+STRM_OUT_PPC_*MM_CHANNELS_*DEPTH_-1,II_*STRM_OUT_PPC_*MM_CHANNELS_*DEPTH_);
             for(auto T_=0;T_<STRM_OUT_PPC_;++T_){
-              dstStreamPix_.data(T_*STRM_OUT_CHANNELS_*DEPTH_+STRM_OUT_CHANNELS_*DEPTH_-1,T_*STRM_OUT_CHANNELS_*DEPTH_)=dstBramPix2_(T_*MM_CHANNELS_*DEPTH_+STRM_OUT_CHANNELS_*DEPTH_-1,T_*MM_CHANNELS_*DEPTH_);
-            }
-            dstStreamPix_.keep=-1;
-            dstStreamPix_.strb=-1;
-            if(0==J_&&0==JJ_&&0==K_&&0==KK_&&0==II_){
-              dstStreamPix_.user=1;
-              dstStreamPix_.last=0;
-            } else if((width-BLOCK_SIZE_)==K_&&(BLOCK_SIZE_/MM_PPC_-1)==KK_&&(MM_PPC_/STRM_OUT_PPC_-1)==II_){
-              dstStreamPix_.user=0;
-              dstStreamPix_.last=1;
-            } else {
-              dstStreamPix_.user=0;
-              dstStreamPix_.last=0;
+              dstStreamPix_(T_*STRM_OUT_CHANNELS_*DEPTH_+STRM_OUT_CHANNELS_*DEPTH_-1,T_*STRM_OUT_CHANNELS_*DEPTH_)=dstBramPix2_(T_*MM_CHANNELS_*DEPTH_+STRM_OUT_CHANNELS_*DEPTH_-1,T_*MM_CHANNELS_*DEPTH_);
             }
             dstStream<<dstStreamPix_;
           }
@@ -52,10 +88,10 @@ static void Func4(
   }
 }
 
-template<int MM_CHANNELS_,int STRM_IN_CHANNELS_,int DEPTH_,int STRM_IN_PPC_,int MM_PPC_,int MAX_ROWS_,int MAX_COLS_,int MAX_STRIDE_,int ROWS_MARGIN_,int COLS_MARGIN_>
+template<int SRCAXI_DEPTH_,int MM_CHANNELS_,int STRM_IN_CHANNELS_,int DEPTH_,int STRM_IN_PPC_,int MM_PPC_,int MAX_ROWS_,int MAX_COLS_,int MAX_STRIDE_,int ROWS_MARGIN_,int COLS_MARGIN_>
 static void Func0(
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<STRM_IN_CHANNELS_,DEPTH_,STRM_IN_PPC_>::Value,1,1,1> >& srcStream,
-  ap_uint<MM_CHANNELS_*DEPTH_*MM_PPC_> srcAxi[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)],
+  ap_uint<MM_CHANNELS_*DEPTH_*MM_PPC_> srcAxi[SRCAXI_DEPTH_],
   ap_uint<Bit_Width<MAX_COLS_>::Value> width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> height
 ){
@@ -78,7 +114,9 @@ static void Func0(
         }
         srcAxi_(I_*STRM_IN_PPC_*MM_CHANNELS_*DEPTH_+STRM_IN_PPC_*MM_CHANNELS_*DEPTH_-1,I_*STRM_IN_PPC_*MM_CHANNELS_*DEPTH_)=srcAxi2_;
       }
-      srcAxi[(J_+ROWS_MARGIN_)*(MAX_STRIDE_/MM_PPC_)+(K_+COLS_MARGIN_/MM_PPC_)]=srcAxi_;
+      const auto index_ {(J_+ROWS_MARGIN_)*(MAX_STRIDE_/MM_PPC_)+(K_+COLS_MARGIN_/MM_PPC_)};
+      assert((index_>=0 && index_<SRCAXI_DEPTH_) && "out of range error");
+      srcAxi[index_]=srcAxi_;
     }
   }
 }
@@ -139,9 +177,9 @@ static void Func1(
   }
 }
 
-template<int CHANNELS_,int DEPTH_,int MM_PPC_,int MAX_STRIDE_,int MAX_ROWS_,int STRM_INTR_PPC_,int MAX_COLS_,int BLOCK_SIZE_,int ROWS_MARGIN_,int COLS_MARGIN_>
+template<int SRCAXI_DEPTH_,int CHANNELS_,int DEPTH_,int MM_PPC_,int MAX_STRIDE_,int MAX_ROWS_,int STRM_INTR_PPC_,int MAX_COLS_,int BLOCK_SIZE_,int ROWS_MARGIN_,int COLS_MARGIN_>
 static void Func2(
-  ap_uint<CHANNELS_*DEPTH_*MM_PPC_> srcAxi[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)],
+  ap_uint<CHANNELS_*DEPTH_*MM_PPC_> srcAxi[SRCAXI_DEPTH_],
   hls::stream<ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,STRM_INTR_PPC_>::Value> >& srcStream,
   ap_uint<Bit_Width<MAX_COLS_>::Value> Width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> Height,
@@ -162,20 +200,31 @@ static void Func2(
       ap_int<16> topLeftY_;
       topLeftX>>topLeftX_;
       topLeftY>>topLeftY_;
+      ap_int<16> topLeftXAxi_;
+      ap_int<16> topLeftYAxi_;
+      if((topLeftY_+ROWS_MARGIN_)>=0&&topLeftY_<MAX_ROWS_&&(topLeftX_+COLS_MARGIN_)>=0&&topLeftX_<MAX_COLS_){
+        topLeftXAxi_=topLeftX_;
+        topLeftYAxi_=topLeftY_;
+      } else {
+        topLeftXAxi_=-COLS_MARGIN_;
+        topLeftYAxi_=-ROWS_MARGIN_;
+      }
 
-      static ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,1>::Value> tmp[STRM_INTR_PPC_][(2*BLOCK_SIZE_)][(2*BLOCK_SIZE_)];
-#pragma HLS ARRAY_PARTITION variable=tmp type=block factor=STRM_INTR_PPC_ dim=1
-#pragma HLS ARRAY_PARTITION variable=tmp type=cyclic factor=4 dim=3
-#pragma HLS BIND_STORAGE variable=tmp type=RAM_T2P impl=URAM
+      static ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,1>::Value> tmp_[STRM_INTR_PPC_][(2*BLOCK_SIZE_)][(2*BLOCK_SIZE_)];
+#pragma HLS ARRAY_PARTITION variable=tmp_ type=block factor=STRM_INTR_PPC_ dim=1
+#pragma HLS ARRAY_PARTITION variable=tmp_ type=cyclic factor=4 dim=3
+#pragma HLS BIND_STORAGE variable=tmp_ type=RAM_T2P impl=URAM
 
       loopBlockRows: for(auto JJ_=0;JJ_<(2*BLOCK_SIZE_);++JJ_){
         loopBlockCols: for(auto KK_=0;KK_<((2*BLOCK_SIZE_)/MM_PPC_);++KK_){
 #pragma HLS PIPELINE II=1
 
-          const auto pix_ {srcAxi[(JJ_+topLeftY_+ROWS_MARGIN_)*(MAX_STRIDE_/MM_PPC_)+(KK_+((topLeftX_+COLS_MARGIN_)/MM_PPC_))]};
+          const auto index_ {(JJ_+topLeftYAxi_+ROWS_MARGIN_)*(MAX_STRIDE_/MM_PPC_)+(KK_+((topLeftXAxi_+COLS_MARGIN_)/MM_PPC_))};
+          assert((index_>=0 && index_<SRCAXI_DEPTH_) && "out of range error");
+          const auto pix_=srcAxi[index_];
           loopBlockColsPpc: for(auto II_=0;II_<MM_PPC_;++II_){
             loopBlockColsPpcTmp: for(auto TT_=0;TT_<STRM_INTR_PPC_;++TT_){
-              tmp[TT_][JJ_][KK_*MM_PPC_+II_]=pix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_);
+              tmp_[TT_][JJ_][KK_*MM_PPC_+II_]=pix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_);
             }
           }
         }
@@ -201,7 +250,15 @@ static void Func2(
           srcXStream>>srcXStream_;
           srcYStream>>srcYStream_;
           loopStrmPpc: for(auto II_=0;II_<STRM_INTR_PPC_;++II_){
-            srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=tmp[II_][(ap_int<16> {srcYStream_(II_*16+15,II_*16)}+ROWS_MARGIN_)-(topLeftY_+ROWS_MARGIN_)][(ap_int<16> {srcXStream_(II_*16+15,II_*16)}+tmpTmp2_+COLS_MARGIN_)-(topLeftX_+COLS_MARGIN_)];
+            if((topLeftY_+ROWS_MARGIN_)>=0&&topLeftY_<MAX_ROWS_&&(topLeftX_+COLS_MARGIN_)>=0&&topLeftX_<MAX_COLS_){
+              const auto index1_ {(ap_int<16> {srcYStream_(II_*16+15,II_*16)}+ROWS_MARGIN_)-(topLeftY_+ROWS_MARGIN_)};
+              assert((index1_>=0 && index1_<(2*BLOCK_SIZE_)) && "out of range error");
+              const auto index2_ {(ap_int<16> {srcXStream_(II_*16+15,II_*16)}+tmpTmp2_+COLS_MARGIN_)-(topLeftX_+COLS_MARGIN_)};
+              assert((index2_>=0 && index2_<(2*BLOCK_SIZE_)) && "out of range error");
+              srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=tmp_[II_][index1_][index2_];
+            } else {
+              srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=0x0;
+            }
           }
           srcStream<<srcStreamPix_;
         }
@@ -210,10 +267,10 @@ static void Func2(
   }
 }
 
-template<int CHANNELS_,int DEPTH_,int MM_PPC_,int STRM_INTR_PPC_,int MAX_ROWS_,int MAX_COLS_,int BLOCK_SIZE_>
+template<int DSTBRAM_DEPTH_,int CHANNELS_,int DEPTH_,int MM_PPC_,int STRM_INTR_PPC_,int MAX_ROWS_,int MAX_COLS_,int MAX_STRIDE_,int BLOCK_SIZE_>
 static void Func3(
   hls::stream<ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,STRM_INTR_PPC_>::Value> >& srcStream,
-  ap_uint<CHANNELS_*DEPTH_*MM_PPC_> dstBram[(D_MAX_COLS_/D_MM_PPC_)*(D_MAX_ROWS_)],
+  ap_uint<CHANNELS_*DEPTH_*MM_PPC_> dstBram[DSTBRAM_DEPTH_],
   hls::stream<bool>& dstBramTrigger,
   ap_uint<Bit_Width<MAX_COLS_>::Value> width,
   ap_uint<Bit_Width<MAX_ROWS_>::Value> height
@@ -236,7 +293,9 @@ static void Func3(
             srcStream>>srcStreamPix_;
             dstBramPix_(II_*STRM_INTR_PPC_*CHANNELS_*DEPTH_+STRM_INTR_PPC_*CHANNELS_*DEPTH_-1,II_*STRM_INTR_PPC_*CHANNELS_*DEPTH_)=srcStreamPix_;
           }
-          dstBram[(J_+JJ_)*(MAX_COLS_/MM_PPC_)+(K_/MM_PPC_)+KK_]=dstBramPix_;
+          const auto index_ {(J_+JJ_)*(MAX_STRIDE_/MM_PPC_)+(K_/MM_PPC_)+KK_};
+          assert((index_>=0 && index_<DSTBRAM_DEPTH_) && "out of range error");
+          dstBram[index_]=dstBramPix_;
         }
       }
     }
@@ -246,10 +305,10 @@ static void Func3(
 
 void D_TOP_
 (
-  ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> vidWrAxi[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)],
-  ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> affRdAxi[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)],
-  ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> affWrAxi[(D_MAX_COLS_/D_MM_PPC_)*(D_MAX_ROWS_)],
-  ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> vidRdAxi[(D_MAX_COLS_/D_MM_PPC_)*(D_MAX_ROWS_)],
+  ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> vidWrAxi[D_VIDWRAXI_DEPTH_],
+  ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> affRdAxi[D_AFFRDAXI_DEPTH_],
+  ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> affWrAxi[D_AFFWRAXI_DEPTH_],
+  ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> vidRdAxi[D_VIDRDAXI_DEPTH_],
 
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_STRM_IN_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> >& srcStream,
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> >& dstStream,
@@ -257,13 +316,16 @@ void D_TOP_
   ap_uint<Bit_Width<D_MAX_COLS_>::Value> width,
   ap_uint<Bit_Width<D_MAX_ROWS_>::Value> height,
 
+  ap_uint<Bit_Width<D_MAX_COLS_>::Value> padWidth,
+  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> padHeight,
+
   ap_uint<Type_Width<D_FP_T_>::Value> rotMat00, ap_uint<Type_Width<D_FP_T_>::Value> rotMat01, ap_uint<Type_Width<D_FP_T_>::Value> rotMat02,
   ap_uint<Type_Width<D_FP_T_>::Value> rotMat10, ap_uint<Type_Width<D_FP_T_>::Value> rotMat11, ap_uint<Type_Width<D_FP_T_>::Value> rotMat12
 ){
-#pragma HLS INTERFACE m_axi port=vidWrAxi offset=slave bundle=vidwraxibnd num_read_outstanding=1 max_read_burst_length=2   depth=(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)
-#pragma HLS INTERFACE m_axi port=affRdAxi offset=slave bundle=affrdaxibnd num_write_outstanding=1 max_write_burst_length=2 depth=(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)
-#pragma HLS INTERFACE m_axi port=affWrAxi offset=slave bundle=affwraxibnd num_read_outstanding=1 max_read_burst_length=2   depth=(D_MAX_COLS_/D_MM_PPC_)*(D_MAX_ROWS_)
-#pragma HLS INTERFACE m_axi port=vidRdAxi offset=slave bundle=vidrdaxibnd num_write_outstanding=1 max_write_burst_length=2 depth=(D_MAX_COLS_/D_MM_PPC_)*(D_MAX_ROWS_)
+#pragma HLS INTERFACE m_axi port=vidWrAxi offset=slave bundle=vidwraxibnd num_read_outstanding=1 max_read_burst_length=2   depth=D_VIDWRAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=affRdAxi offset=slave bundle=affrdaxibnd num_write_outstanding=1 max_write_burst_length=2 depth=D_AFFRDAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=affWrAxi offset=slave bundle=affwraxibnd num_read_outstanding=1 max_read_burst_length=2   depth=D_AFFWRAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=vidRdAxi offset=slave bundle=vidrdaxibnd num_write_outstanding=1 max_write_burst_length=2 depth=D_VIDRDAXI_DEPTH_
 
 #pragma HLS INTERFACE axis port=srcStream
 #pragma HLS INTERFACE axis port=dstStream
@@ -271,19 +333,24 @@ void D_TOP_
 #pragma HLS INTERFACE s_axilite bundle=ctrl port=return
 #pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x10 port=width
 #pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x18 port=height
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x20 port=vidWrAxi
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x28 port=affRdAxi
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x30 port=affWrAxi
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x38 port=vidRdAxi
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x40 port=rotMat00
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x48 port=rotMat01
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x50 port=rotMat02
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x58 port=rotMat10
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x60 port=rotMat11
-#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x68 port=rotMat12
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x20 port=padWidth
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x28 port=padHeight
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x30 port=vidWrAxi
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x38 port=affRdAxi
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x40 port=affWrAxi
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x48 port=vidRdAxi
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x50 port=rotMat00
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x58 port=rotMat01
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x60 port=rotMat02
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x68 port=rotMat10
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x70 port=rotMat11
+#pragma HLS INTERFACE s_axilite bundle=ctrl offset=0x78 port=rotMat12
 
   const auto width_ {width};
   const auto height_ {height};
+
+  const auto padWidth_ {padWidth};
+  const auto padHeight_ {padHeight};
 
   const auto rotMat00_ {rotMat00};
   const auto rotMat01_ {rotMat01};
@@ -296,6 +363,9 @@ void D_TOP_
 
   hls::stream<ap_uint<Axi_Vid_Bus_Width<D_MM_CHANNELS_,D_DEPTH_,D_STRM_INTR_PPC_>::Value> > localStream_("localStream");
 #pragma HLS STREAM variable=localStream_ depth=2*D_BLOCK_SIZE_*(D_BLOCK_SIZE_/D_STRM_INTR_PPC_)
+
+  hls::stream<ap_uint<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value> > dstLocalStream_("dstLocalStream");
+#pragma HLS STREAM variable=localStream_ depth=2*D_BLOCK_SIZE_*(D_BLOCK_SIZE_/D_STRM_OUT_PPC_)
 
   hls::stream<ap_int<16*D_STRM_INTR_PPC_>> srcXStream_("srcXStream");
 #pragma HLS STREAM variable=srcXStream_ depth=2*D_BLOCK_SIZE_*(D_BLOCK_SIZE_/D_STRM_INTR_PPC_)
@@ -313,7 +383,7 @@ void D_TOP_
 #pragma HLS STREAM variable=dstBramTrigger_ depth=8
 
   //
-  Func0<D_MM_CHANNELS_,D_STRM_IN_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_,D_MM_PPC_,D_MAX_ROWS_,D_MAX_COLS_,D_MAX_STRIDE_,D_ROWS_MARGIN_,D_COLS_MARGIN_>(
+  Func0<D_VIDWRAXI_DEPTH_,D_MM_CHANNELS_,D_STRM_IN_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_,D_MM_PPC_,D_MAX_ROWS_,D_MAX_COLS_,D_MAX_STRIDE_,D_ROWS_MARGIN_,D_COLS_MARGIN_>(
     srcStream,
     vidWrAxi,
     width_,
@@ -322,8 +392,8 @@ void D_TOP_
 
   //
   Func1<D_FP_T_,D_MAX_COLS_,D_MAX_ROWS_,D_STRM_INTR_PPC_,D_BLOCK_SIZE_>(
-    width_,
-    height_,
+    padWidth_,
+    padHeight_,
     srcXStream_,
     srcYStream_,
     topLeftX_,
@@ -337,11 +407,11 @@ void D_TOP_
   );
 
   //
-  Func2<D_MM_CHANNELS_,D_DEPTH_,D_MM_PPC_,D_MAX_STRIDE_,D_MAX_ROWS_,D_STRM_INTR_PPC_,D_MAX_COLS_,D_BLOCK_SIZE_,D_ROWS_MARGIN_,D_COLS_MARGIN_>(
+  Func2<D_AFFRDAXI_DEPTH_,D_MM_CHANNELS_,D_DEPTH_,D_MM_PPC_,D_MAX_STRIDE_,D_MAX_ROWS_,D_STRM_INTR_PPC_,D_MAX_COLS_,D_BLOCK_SIZE_,D_ROWS_MARGIN_,D_COLS_MARGIN_>(
     affRdAxi,
     localStream_,
-    width_,
-    height_,
+    padWidth_,
+    padHeight_,
     srcXStream_,
     srcYStream_,
     topLeftX_,
@@ -349,20 +419,30 @@ void D_TOP_
   );
 
   //
-  Func3<D_MM_CHANNELS_,D_DEPTH_,D_MM_PPC_,D_STRM_INTR_PPC_,D_MAX_ROWS_,D_MAX_COLS_,D_BLOCK_SIZE_>(
+  Func3<D_AFFWRAXI_DEPTH_,D_MM_CHANNELS_,D_DEPTH_,D_MM_PPC_,D_STRM_INTR_PPC_,D_MAX_ROWS_,D_MAX_COLS_,D_MAX_STRIDE_,D_BLOCK_SIZE_>(
     localStream_,
     affWrAxi,
     dstBramTrigger_,
-    width_,
-    height_
+    padWidth_,
+    padHeight_
   );
 
   //
-  Func4<D_MM_CHANNELS_,D_STRM_OUT_CHANNELS_,D_DEPTH_,D_MM_PPC_,D_MAX_ROWS_,D_MAX_COLS_,D_STRM_OUT_PPC_,D_BLOCK_SIZE_>(
+  Func4<D_VIDRDAXI_DEPTH_,D_MM_CHANNELS_,D_STRM_OUT_CHANNELS_,D_DEPTH_,D_MM_PPC_,D_MAX_ROWS_,D_MAX_COLS_,D_MAX_STRIDE_,D_STRM_OUT_PPC_,D_BLOCK_SIZE_>(
     vidRdAxi,
     dstBramTrigger_,
+    dstLocalStream_,
+    padWidth_,
+    padHeight_
+  );
+
+  //
+  Func5<D_STRM_OUT_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_,D_MAX_ROWS_,D_MAX_COLS_>(
+    dstLocalStream_,
     dstStream,
     width_,
-    height_
+    height_,
+    padWidth_,
+    padHeight_
   );
 }

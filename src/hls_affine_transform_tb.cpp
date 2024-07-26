@@ -28,7 +28,12 @@ cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, float angle, float scale) 
 int main()
 {
   cv::Mat imgBgr = cv::imread("/tmp/image.png");
+  cv::Mat imgBgr2 = cv::imread("/tmp/image.png");
 
+  if(imgBgr2.empty()){
+    std::cout << "Failed to read image \n";
+    return -1;
+  }
   if(imgBgr.empty()){
     std::cout << "Failed to read image \n";
     return -1;
@@ -44,18 +49,12 @@ int main()
   // Ek kaydırma (y ekseninde 10 piksel)
   //M.at<float>(1, 2) += 100;
 
-  cv::Mat imgOut;
-  imgOut=cv::Mat(imgBgr.size(),imgBgr.type());
+  cv::Mat imgOut=cv::Mat::zeros(imgBgr2.size(),imgBgr2.type());
+  //imgOut=cv::Mat(imgBgr.size(),imgBgr.type());
 
+#if 1
   for (int y = 0; y < imgBgr.rows; y+=32) {
     for (int x = 0; x < imgBgr.cols; x+=32) {
-      cv::Mat imgTmp(cv::Size(32,32),imgBgr.type());
-      for(auto J=0;J<32;++J){
-        for(auto K=0;K<32;++K){
-          imgTmp.at<cv::Vec3b>(J,K)=imgBgr.at<cv::Vec3b>(J+y,K+x);
-        }
-      }
-
       float srcX[32][32];
       float srcY[32][32];
       for(auto J=0;J<32;++J){
@@ -67,8 +66,8 @@ int main()
 
       for(auto J=0;J<32;++J){
         for(auto K=0;K<32;++K){
-          if (srcX[J][K] >= 0 && srcX[J][K] < imgBgr.cols && srcY[J][K] >= 0 && srcY[J][K] < imgBgr.rows) {
-              imgOut.at<cv::Vec3b>(J+y,K+x) = imgBgr.at<cv::Vec3b>(cv::Point(srcX[J][K], srcY[J][K]));
+          if (srcX[J][K] >= 0 && srcX[J][K] < imgBgr2.cols && srcY[J][K] >= 0 && srcY[J][K] < imgBgr2.rows) {
+              imgOut.at<cv::Vec3b>(J+y,K+x) = imgBgr2.at<cv::Vec3b>(cv::Point(srcX[J][K], srcY[J][K]));
           } else {
               imgOut.at<cv::Vec3b>(J+y,K+x) = 0x0;
           }
@@ -76,13 +75,14 @@ int main()
       }
     }
   }
+#endif
 
   const std::string rotatedImageGoldenStr {"golden_"+std::to_string(goldenangle)+".jpg"};
   cv::imwrite(rotatedImageGoldenStr,imgOut);
 
   // HLS
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)] = {0x80};
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)] = {0x80};
 
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_STRM_IN_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> > srcStream_("srcStream");
   for(auto J_=0;J_<imgBgr.rows;++J_){
@@ -100,11 +100,13 @@ int main()
     }
   }
 
+  cv::Mat imgBgrOut_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
       for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
         cv::Vec3b Pix_=imgBgr.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_);
+        imgBgrOut_.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=imgBgr.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_);
         hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+7,Z_*D_MM_CHANNELS_*D_DEPTH_+0)=Pix_[0];
         hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+15,Z_*D_MM_CHANNELS_*D_DEPTH_+8)=Pix_[1];
         hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+23,Z_*D_MM_CHANNELS_*D_DEPTH_+16)=Pix_[2];
@@ -112,9 +114,10 @@ int main()
       imgHls2[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)]=hlsPix_;
     }
   }
+  cv::imwrite("imgBgrOut.png",imgBgrOut_);
  
-  ap_uint<Bit_Width<D_MAX_COLS_>::Value> Width=imgBgr.cols;
-  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> Height=imgBgr.rows;
+  ap_uint<Bit_Width<D_MAX_COLS_>::Value> width=imgBgr.cols;
+  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> height=imgBgr.rows;
   fp_struct<D_FP_T_> M00_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,0)));
   fp_struct<D_FP_T_> M01_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,1)));
   fp_struct<D_FP_T_> M02_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,2)));
@@ -122,8 +125,8 @@ int main()
   fp_struct<D_FP_T_> M11_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(1,1)));
   fp_struct<D_FP_T_> M12_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(1,2)));
 
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram_[D_MAX_ROWS_*(D_MAX_COLS_/D_MM_PPC_)];
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> dstBram2_[D_MAX_ROWS_*(D_MAX_COLS_/D_MM_PPC_)];
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> affWrAxi_[D_AFFWRAXI_DEPTH_] = {0x80};
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> vidRdAxi_[D_VIDRDAXI_DEPTH_] = {0x80};
   for(auto J_=0;J_<imgOut.rows;++J_){
     for(auto K_=0;K_<imgOut.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
@@ -133,45 +136,53 @@ int main()
         hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+15,Z_*D_MM_CHANNELS_*D_DEPTH_+8)=Pix_[1];
         hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+23,Z_*D_MM_CHANNELS_*D_DEPTH_+16)=Pix_[2];
       }
-      dstBram2_[J_*(D_MAX_COLS_/D_MM_PPC_)+K_]=hlsPix_;
+      vidRdAxi_[J_*(D_MAX_STRIDE_/D_MM_PPC_)+K_]=hlsPix_;
     }
   }
 
+  ap_uint<Bit_Width<D_MAX_COLS_>::Value> padWidth=width;
+  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> padHeight=height;
+  if(padHeight%D_BLOCK_SIZE_){
+    padHeight+=D_BLOCK_SIZE_-(padHeight%D_BLOCK_SIZE_);
+  }
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> > dstStream_("dstStream");
+
   D_TOP_(
     imgHls,
     imgHls2,
-    dstBram_,
-    dstBram2_,
+    affWrAxi_,
+    vidRdAxi_,
     srcStream_,
     dstStream_,
-    Width,
-    Height,
+    width,
+    height,
+    padWidth,
+    padHeight,
     M00_.data(),M01_.data(),M02_.data(),
     M10_.data(),M11_.data(),M12_.data()
   );
 
-  cv::Mat cvImgHlsOut_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
+  cv::Mat cvImgHlsOut2Post_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
-      hlsPix_=imgHls[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)];
+      hlsPix_=imgHls2[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)];
       for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
         cv::Vec3b cvPix_;
         cvPix_[0]=hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+7,Z_*D_MM_CHANNELS_*D_DEPTH_+0);
         cvPix_[1]=hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+15,Z_*D_MM_CHANNELS_*D_DEPTH_+8);
         cvPix_[2]=hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+23,Z_*D_MM_CHANNELS_*D_DEPTH_+16);
-        cvImgHlsOut_.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=cvPix_;
+        cvImgHlsOut2Post_.at<cv::Vec3b>(J_,K_*D_MM_PPC_+Z_)=cvPix_;
       }
     }
   }
-  cv::imwrite("imgHlsOut.png",cvImgHlsOut_);
+  cv::imwrite("imgHlsOut2Post.png",cvImgHlsOut2Post_);
 
   cv::Mat cvImgDstBramOut_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
-      hlsPix_=dstBram_[(J_)*(D_MAX_COLS_/D_MM_PPC_)+K_];
+      hlsPix_=affWrAxi_[(J_)*(D_MAX_STRIDE_/D_MM_PPC_)+K_];
       for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
         cv::Vec3b cvPix_;
         cvPix_[0]=hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+7,Z_*D_MM_CHANNELS_*D_DEPTH_+0);
@@ -187,7 +198,7 @@ int main()
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
-      hlsPix_=dstBram2_[(J_)*(D_MAX_COLS_/D_MM_PPC_)+K_];
+      hlsPix_=vidRdAxi_[J_*(D_MAX_STRIDE_/D_MM_PPC_)+K_];
       for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
         cv::Vec3b cvPix_;
         cvPix_[0]=hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+7,Z_*D_MM_CHANNELS_*D_DEPTH_+0);
@@ -201,10 +212,12 @@ int main()
 
   cv::Mat imgBgrNewOut_;
   imgBgrNewOut_=cv::Mat(imgBgr.size(),imgBgr.type());
+  std::ofstream ofs {"log.txt"};
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_STRM_OUT_PPC_;++K_){
       ap_axiu<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> dstStreamPix_;
       dstStream_>>dstStreamPix_;
+      ofs<<"J_: "<<J_<<", K_: "<<K_<<", last: "<<dstStreamPix_.last<<", user: "<<dstStreamPix_.user<<'\n';
       for(auto Z_=0;Z_<D_STRM_OUT_PPC_;++Z_){
         ap_uint<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,1>::Value> pix_;
         pix_=dstStreamPix_.data(Z_*D_STRM_OUT_CHANNELS_*D_DEPTH_+D_STRM_OUT_CHANNELS_*D_DEPTH_-1,Z_*D_STRM_OUT_CHANNELS_*D_DEPTH_);
