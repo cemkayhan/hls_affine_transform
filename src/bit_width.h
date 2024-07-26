@@ -11,6 +11,6 @@ template<>
 struct Bit_Width<0>
 {
   enum {Value=0};
-};       
+};
 
 #endif

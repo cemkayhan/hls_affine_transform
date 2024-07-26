@@ -7,6 +7,7 @@
 #include "axi_vid_bus_width.h"
 #include "utils/x_hls_utils.h"
 
+#include "pow2.h"
 #include "bit_width.h"
 #include "type_width.h"
 #include "fpt_func.h"
