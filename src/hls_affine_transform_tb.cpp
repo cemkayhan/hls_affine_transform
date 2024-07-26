@@ -81,8 +81,8 @@ int main()
   cv::imwrite(rotatedImageGoldenStr,imgOut);
 
   // HLS
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)] = {0x80};
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)] = {0x80};
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls_[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)] = {0x80};
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2_[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)] = {0x80};
 
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_STRM_IN_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> > srcStream_("srcStream");
   for(auto J_=0;J_<imgBgr.rows;++J_){
@@ -111,13 +111,13 @@ int main()
         hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+15,Z_*D_MM_CHANNELS_*D_DEPTH_+8)=Pix_[1];
         hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+23,Z_*D_MM_CHANNELS_*D_DEPTH_+16)=Pix_[2];
       }
-      imgHls2[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)]=hlsPix_;
+      imgHls2_[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)]=hlsPix_;
     }
   }
   cv::imwrite("imgBgrOut.png",imgBgrOut_);
  
-  ap_uint<Bit_Width<D_MAX_COLS_>::Value> width=imgBgr.cols;
-  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> height=imgBgr.rows;
+  ap_uint<Bit_Width<D_MAX_COLS_>::Value> width_=imgBgr.cols;
+  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> height_=imgBgr.rows;
   fp_struct<D_FP_T_> M00_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,0)));
   fp_struct<D_FP_T_> M01_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,1)));
   fp_struct<D_FP_T_> M02_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(0,2)));
@@ -140,24 +140,24 @@ int main()
     }
   }
 
-  ap_uint<Bit_Width<D_MAX_COLS_>::Value> padWidth=width;
-  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> padHeight=height;
-  if(padHeight%D_BLOCK_SIZE_){
-    padHeight+=D_BLOCK_SIZE_-(padHeight%D_BLOCK_SIZE_);
+  ap_uint<Bit_Width<D_MAX_COLS_>::Value> padWidth_=width_;
+  ap_uint<Bit_Width<D_MAX_ROWS_>::Value> padHeight_=height_;
+  if(padHeight_%D_BLOCK_SIZE_){
+    padHeight_+=D_BLOCK_SIZE_-(padHeight_%D_BLOCK_SIZE_);
   }
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> > dstStream_("dstStream");
 
   D_TOP_(
-    imgHls,
-    imgHls2,
+    imgHls_,
+    imgHls2_,
     affWrAxi_,
     vidRdAxi_,
     srcStream_,
     dstStream_,
-    width,
-    height,
-    padWidth,
-    padHeight,
+    width_,
+    height_,
+    padWidth_,
+    padHeight_,
     M00_.data(),M01_.data(),M02_.data(),
     M10_.data(),M11_.data(),M12_.data()
   );
@@ -166,7 +166,7 @@ int main()
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
-      hlsPix_=imgHls2[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)];
+      hlsPix_=imgHls2_[(J_+D_ROWS_MARGIN_)*(D_MAX_STRIDE_/D_MM_PPC_)+(K_+D_COLS_MARGIN_/D_MM_PPC_)];
       for(auto Z_=0;Z_<D_MM_PPC_;++Z_){
         cv::Vec3b cvPix_;
         cvPix_[0]=hlsPix_(Z_*D_MM_CHANNELS_*D_DEPTH_+7,Z_*D_MM_CHANNELS_*D_DEPTH_+0);
@@ -176,7 +176,7 @@ int main()
       }
     }
   }
-  cv::imwrite("imgHlsOut2Post.png",cvImgHlsOut2Post_);
+  cv::imwrite("imgHls2.png",cvImgHlsOut2Post_);
 
   cv::Mat cvImgDstBramOut_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){

@@ -31,6 +31,7 @@ static void Func5(
     dstStreamPix_.strb=-1;
     dstStreamPix_.data=dstLocalStreamPix_;
 
+    static std::ofstream ofs {"mynewlastlog.txt"};
     if(0==J_&&0==K_){
       dstStreamPix_.user=1;
       dstStreamPix_.last=0;
@@ -43,6 +44,7 @@ static void Func5(
     }
     
     if(J_<height&&K_<width){
+      ofs<<"J_: "<<J_<<", K_: "<<K_<<", last: "<<dstStreamPix_.last<<", user: "<<dstStreamPix_.user<<'\n';
       dstStream<<dstStreamPix_;
     }
   }
@@ -109,7 +111,7 @@ static void Func0(
         ap_axiu<Axi_Vid_Bus_Width<STRM_IN_CHANNELS_,DEPTH_,STRM_IN_PPC_>::Value,1,1,1> srcStreamPix_;
         srcStream>>srcStreamPix_;
         ap_uint<MM_CHANNELS_*DEPTH_*STRM_IN_PPC_> srcAxi2_;
-        for(auto T_=0;T_<STRM_IN_PPC_;++T_){
+        loopStrmInPpc: for(auto T_=0;T_<STRM_IN_PPC_;++T_){
           srcAxi2_(T_*MM_CHANNELS_*DEPTH_+STRM_IN_CHANNELS_*DEPTH_-1,T_*MM_CHANNELS_*DEPTH_)=srcStreamPix_.data(T_*STRM_IN_CHANNELS_*DEPTH_+STRM_IN_CHANNELS_*DEPTH_-1,T_*STRM_IN_CHANNELS_*DEPTH_);
         }
         srcAxi_(I_*STRM_IN_PPC_*MM_CHANNELS_*DEPTH_+STRM_IN_PPC_*MM_CHANNELS_*DEPTH_-1,I_*STRM_IN_PPC_*MM_CHANNELS_*DEPTH_)=srcAxi2_;
@@ -230,7 +232,10 @@ static void Func2(
         }
       }
 
-#if 4==D_MM_PPC_
+#if 8==D_MM_PPC_
+      const ap_int<16> topLeftX2_ {topLeftX_};
+      const auto tmpTmp2_ {ap_uint<3> {topLeftX2_(2,0)}};
+#elif 4==D_MM_PPC_
       const ap_int<16> topLeftX2_ {topLeftX_};
       const auto tmpTmp2_ {ap_uint<2> {topLeftX2_(1,0)}};
 #elif 2==D_MM_PPC_
@@ -291,7 +296,12 @@ static void Func3(
           loopBlockColsPpc: for(auto II_=0;II_<(MM_PPC_/STRM_INTR_PPC_);++II_){
             ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,STRM_INTR_PPC_>::Value> srcStreamPix_;
             srcStream>>srcStreamPix_;
-            dstBramPix_(II_*STRM_INTR_PPC_*CHANNELS_*DEPTH_+STRM_INTR_PPC_*CHANNELS_*DEPTH_-1,II_*STRM_INTR_PPC_*CHANNELS_*DEPTH_)=srcStreamPix_;
+            ap_uint<CHANNELS_*DEPTH_*STRM_INTR_PPC_> dstBramPix2_;
+            loopStrmInPpc: for(auto T_=0;T_<STRM_INTR_PPC_;++T_){
+              dstBramPix2_(T_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,T_*CHANNELS_*DEPTH_)=srcStreamPix_(T_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,T_*CHANNELS_*DEPTH_);
+            }
+            //dstBramPix_(II_*STRM_INTR_PPC_*CHANNELS_*DEPTH_+STRM_INTR_PPC_*CHANNELS_*DEPTH_-1,II_*STRM_INTR_PPC_*CHANNELS_*DEPTH_)=srcStreamPix_;
+            dstBramPix_(II_*STRM_INTR_PPC_*CHANNELS_*DEPTH_+STRM_INTR_PPC_*CHANNELS_*DEPTH_-1,II_*STRM_INTR_PPC_*CHANNELS_*DEPTH_)=dstBramPix2_;
           }
           const auto index_ {(J_+JJ_)*(MAX_STRIDE_/MM_PPC_)+(K_/MM_PPC_)+KK_};
           assert((index_>=0 && index_<DSTBRAM_DEPTH_) && "out of range error");
