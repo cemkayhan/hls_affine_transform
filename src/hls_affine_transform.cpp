@@ -210,9 +210,8 @@ static void Func2(
         topLeftYAxi_=-ROWS_MARGIN_;
       }
 
-      static ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,1>::Value> tmp_[STRM_INTR_PPC_][(2*BLOCK_SIZE_)][(2*BLOCK_SIZE_)];
-#pragma HLS ARRAY_PARTITION variable=tmp_ type=block factor=STRM_INTR_PPC_ dim=1
-#pragma HLS ARRAY_PARTITION variable=tmp_ type=cyclic factor=4 dim=3
+      static ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,1>::Value> tmp_[(2*BLOCK_SIZE_)][(2*BLOCK_SIZE_)];
+#pragma HLS ARRAY_PARTITION variable=tmp_ type=cyclic factor=8 dim=2
 #pragma HLS BIND_STORAGE variable=tmp_ type=RAM_T2P impl=URAM
 
       loopBlockRows: for(auto JJ_=0;JJ_<(2*BLOCK_SIZE_);++JJ_){
@@ -223,9 +222,7 @@ static void Func2(
           assert((index_>=0 && index_<SRCAXI_DEPTH_) && "out of range error");
           const auto pix_=srcAxi[index_];
           loopBlockColsPpc: for(auto II_=0;II_<MM_PPC_;++II_){
-            loopBlockColsPpcTmp: for(auto TT_=0;TT_<STRM_INTR_PPC_;++TT_){
-              tmp_[TT_][JJ_][KK_*MM_PPC_+II_]=pix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_);
-            }
+            tmp_[JJ_][KK_*MM_PPC_+II_]=pix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_);
           }
         }
       }
@@ -247,7 +244,7 @@ static void Func2(
               assert((index1_>=0 && index1_<(2*BLOCK_SIZE_)) && "out of range error");
               const auto index2_ {(ap_int<16> {srcXStream_(II_*16+15,II_*16)}+tmpTmp2_+COLS_MARGIN_)-(topLeftX_+COLS_MARGIN_)};
               assert((index2_>=0 && index2_<(2*BLOCK_SIZE_)) && "out of range error");
-              srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=tmp_[II_][index1_][index2_];
+              srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=tmp_[index1_][index2_];
             } else {
               srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=0x0;
             }
