@@ -318,10 +318,10 @@ void D_TOP_
   ap_uint<Type_Width<D_FP_T_>::Value> rotMat00, ap_uint<Type_Width<D_FP_T_>::Value> rotMat01, ap_uint<Type_Width<D_FP_T_>::Value> rotMat02,
   ap_uint<Type_Width<D_FP_T_>::Value> rotMat10, ap_uint<Type_Width<D_FP_T_>::Value> rotMat11, ap_uint<Type_Width<D_FP_T_>::Value> rotMat12
 ){
-#pragma HLS INTERFACE m_axi port=vidWrAxi offset=slave bundle=vidwraxibnd num_read_outstanding=1 max_read_burst_length=2   depth=D_VIDWRAXI_DEPTH_
-#pragma HLS INTERFACE m_axi port=affRdAxi offset=slave bundle=affrdaxibnd num_write_outstanding=1 max_write_burst_length=2 depth=D_AFFRDAXI_DEPTH_
-#pragma HLS INTERFACE m_axi port=affWrAxi offset=slave bundle=affwraxibnd num_read_outstanding=1 max_read_burst_length=2   depth=D_AFFWRAXI_DEPTH_
-#pragma HLS INTERFACE m_axi port=vidRdAxi offset=slave bundle=vidrdaxibnd num_write_outstanding=1 max_write_burst_length=2 depth=D_VIDRDAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=vidWrAxi offset=slave bundle=vidwraxibnd num_write_outstanding=D_VIDWRAXI_NUM_WRITE_OUTSTANDING_ num_read_outstanding=1  max_write_burst_length=16 max_read_burst_length=2  depth=D_VIDWRAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=affRdAxi offset=slave bundle=affrdaxibnd num_read_outstanding=D_AFFRDAXI_NUM_READ_OUTSTANDING_   num_write_outstanding=1 max_read_burst_length=16  max_write_burst_length=2 depth=D_AFFRDAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=affWrAxi offset=slave bundle=affwraxibnd num_write_outstanding=D_AFFWRAXI_NUM_WRITE_OUTSTANDING_ num_read_outstanding=1  max_write_burst_length=16 max_read_burst_length=2  depth=D_AFFWRAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=vidRdAxi offset=slave bundle=vidrdaxibnd num_read_outstanding=D_VIDRDAXI_NUM_READ_OUTSTANDING_   num_write_outstanding=1 max_read_burst_length=16  max_write_burst_length=2 depth=D_VIDRDAXI_DEPTH_
 
 #pragma HLS INTERFACE axis port=srcStream
 #pragma HLS INTERFACE axis port=dstStream
@@ -361,7 +361,7 @@ void D_TOP_
 #pragma HLS STREAM variable=localStream_ depth=2*D_BLOCK_SIZE_*(D_BLOCK_SIZE_/D_STRM_INTR_PPC_)
 
   hls::stream<ap_uint<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value> > dstLocalStream_("dstLocalStream");
-#pragma HLS STREAM variable=localStream_ depth=2*D_BLOCK_SIZE_*(D_BLOCK_SIZE_/D_STRM_OUT_PPC_)
+#pragma HLS STREAM variable=dstLocalStream_ depth=2*D_BLOCK_SIZE_*(D_BLOCK_SIZE_/D_STRM_OUT_PPC_)
 
   hls::stream<ap_int<16*D_STRM_INTR_PPC_>> srcXStream_("srcXStream");
 #pragma HLS STREAM variable=srcXStream_ depth=2*D_BLOCK_SIZE_*(D_BLOCK_SIZE_/D_STRM_INTR_PPC_)
