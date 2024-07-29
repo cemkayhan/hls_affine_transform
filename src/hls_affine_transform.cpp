@@ -315,10 +315,10 @@ void D_TOP_
   ap_uint<Type_Width<D_FP_T_>::Value> rotMat00, ap_uint<Type_Width<D_FP_T_>::Value> rotMat01, ap_uint<Type_Width<D_FP_T_>::Value> rotMat02,
   ap_uint<Type_Width<D_FP_T_>::Value> rotMat10, ap_uint<Type_Width<D_FP_T_>::Value> rotMat11, ap_uint<Type_Width<D_FP_T_>::Value> rotMat12
 ){
-#pragma HLS INTERFACE m_axi port=vidWrAxi offset=slave bundle=vidwraxibnd num_write_outstanding=D_VIDWRAXI_NUM_WRITE_OUTSTANDING_ num_read_outstanding=1  max_write_burst_length=16 max_read_burst_length=2  depth=D_VIDWRAXI_DEPTH_
-#pragma HLS INTERFACE m_axi port=affRdAxi offset=slave bundle=affrdaxibnd num_read_outstanding=D_AFFRDAXI_NUM_READ_OUTSTANDING_   num_write_outstanding=1 max_read_burst_length=16  max_write_burst_length=2 depth=D_AFFRDAXI_DEPTH_
-#pragma HLS INTERFACE m_axi port=affWrAxi offset=slave bundle=affwraxibnd num_write_outstanding=D_AFFWRAXI_NUM_WRITE_OUTSTANDING_ num_read_outstanding=1  max_write_burst_length=16 max_read_burst_length=2  depth=D_AFFWRAXI_DEPTH_
-#pragma HLS INTERFACE m_axi port=vidRdAxi offset=slave bundle=vidrdaxibnd num_read_outstanding=D_VIDRDAXI_NUM_READ_OUTSTANDING_   num_write_outstanding=1 max_read_burst_length=16  max_write_burst_length=2 depth=D_VIDRDAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=vidWrAxi latency=D_VIDWRAXI_LATENCY_ offset=slave bundle=vidwraxibnd num_write_outstanding=D_VIDWRAXI_NUM_WRITE_OUTSTANDING_ num_read_outstanding=1  max_write_burst_length=16 max_read_burst_length=2  depth=D_VIDWRAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=affRdAxi latency=D_AFFRDAXI_LATENCY_ offset=slave bundle=affrdaxibnd num_read_outstanding=D_AFFRDAXI_NUM_READ_OUTSTANDING_   num_write_outstanding=1 max_read_burst_length=16  max_write_burst_length=2 depth=D_AFFRDAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=affWrAxi latency=D_AFFWRAXI_LATENCY_ offset=slave bundle=affwraxibnd num_write_outstanding=D_AFFWRAXI_NUM_WRITE_OUTSTANDING_ num_read_outstanding=1  max_write_burst_length=16 max_read_burst_length=2  depth=D_AFFWRAXI_DEPTH_
+#pragma HLS INTERFACE m_axi port=vidRdAxi latency=D_VIDRDAXI_LATENCY_ offset=slave bundle=vidrdaxibnd num_read_outstanding=D_VIDRDAXI_NUM_READ_OUTSTANDING_   num_write_outstanding=1 max_read_burst_length=16  max_write_burst_length=2 depth=D_VIDRDAXI_DEPTH_
 
 #pragma HLS INTERFACE axis port=srcStream
 #pragma HLS INTERFACE axis port=dstStream
