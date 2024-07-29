@@ -13,7 +13,7 @@ cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, float angle, float scale) 
     float alpha = scale * cos(angle * CV_PI / 180.0);
     float beta = scale * sin(angle * CV_PI / 180.0);
 
-    cv::Mat rot_mat = cv::Mat::zeros(2, 3, CV_64F); //2x3 matrix oluşturuyoruz
+    cv::Mat rot_mat = cv::Mat(2, 3, CV_64F); //2x3 matrix oluşturuyoruz
     rot_mat.at<float>(0, 0) = alpha;
     rot_mat.at<float>(0, 1) = -beta;
     rot_mat.at<float>(0, 2) = (1 - alpha) * center.x + beta * center.y;
@@ -81,8 +81,8 @@ int main()
   cv::imwrite(rotatedImageGoldenStr,imgOut);
 
   // HLS
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls_[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)] = {0x80};
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2_[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)] = {0x80};
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls_[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> imgHls2_[(D_MAX_STRIDE_/D_MM_PPC_)*(2*D_MAX_ROWS_)];
 
   hls::stream<ap_axiu<Axi_Vid_Bus_Width<D_STRM_IN_CHANNELS_,D_DEPTH_,D_STRM_IN_PPC_>::Value,1,1,1> > srcStream_("srcStream");
   for(auto J_=0;J_<imgBgr.rows;++J_){
@@ -100,7 +100,7 @@ int main()
     }
   }
 
-  cv::Mat imgBgrOut_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
+  cv::Mat imgBgrOut_=cv::Mat(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
@@ -125,8 +125,8 @@ int main()
   fp_struct<D_FP_T_> M11_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(1,1)));
   fp_struct<D_FP_T_> M12_=fp_struct<D_FP_T_>(static_cast<D_FP_T_>(M.at<float>(1,2)));
 
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> affWrAxi_[D_AFFWRAXI_DEPTH_] = {0x80};
-  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> vidRdAxi_[D_VIDRDAXI_DEPTH_] = {0x80};
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> affWrAxi_[D_AFFWRAXI_DEPTH_];
+  static ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> vidRdAxi_[D_VIDRDAXI_DEPTH_];
   for(auto J_=0;J_<imgOut.rows;++J_){
     for(auto K_=0;K_<imgOut.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
@@ -162,7 +162,7 @@ int main()
     M10_.data(),M11_.data(),M12_.data()
   );
 
-  cv::Mat cvImgHlsOut2Post_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
+  cv::Mat cvImgHlsOut2Post_=cv::Mat(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
@@ -178,7 +178,7 @@ int main()
   }
   cv::imwrite("imgHls2.png",cvImgHlsOut2Post_);
 
-  cv::Mat cvImgDstBramOut_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
+  cv::Mat cvImgDstBramOut_=cv::Mat(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
@@ -194,7 +194,7 @@ int main()
   }
   cv::imwrite("imgDstBramOut.png",cvImgDstBramOut_);
 
-  cv::Mat cvImgDstBram2Out_=cv::Mat::zeros(imgBgr.size(),CV_8UC3);
+  cv::Mat cvImgDstBram2Out_=cv::Mat(imgBgr.size(),CV_8UC3);
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_MM_PPC_;++K_){
       ap_uint<D_MM_CHANNELS_*D_DEPTH_*D_MM_PPC_> hlsPix_;
