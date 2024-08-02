@@ -66,9 +66,13 @@ int main()
   cv::imwrite("imgOutExt.png",imgOutExt_);
 
 #if 1
+  std::ofstream ofs201 {"ref201.txt"};
   std::ofstream ofs2 {"topLeftRef.txt"};
   cv::Mat refImgSrc_=cv::Mat(imgBgr2.size(),CV_8UC3);
   cv::Mat refImgRoi_=cv::Mat::zeros(imgBgr2.size(),CV_8UC3);
+
+  cv::Mat rotRefAll_=cv::Mat(cv::Size(imgBgr2.size()),CV_8UC3);
+
   for (int y = 0; y < imgBgr.rows; y+=32) {
     for (int x = 0; x < imgBgr.cols; x+=32) {
       float srcX[32][32];
@@ -121,24 +125,45 @@ int main()
       cv::imwrite("topRef64x64+"+std::to_string(cntr3_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",top64x64_);
       ++cntr3_;
 
+      cv::Mat rotRef_=cv::Mat(32,32,CV_8UC3);
+      for(auto yy_=0;yy_<32;++yy_){
+        for(auto xx_=0;xx_<32;++xx_){
+          const auto p_ {cv::Point(srcX[yy_][xx_],srcY[yy_][xx_])};
+          rotRef_.at<cv::Vec3b>(yy_,xx_)=top64x64_.at<cv::Vec3b>(p_.y-topLeftY_,p_.x-topLeftX_);
+          rotRefAll_.at<cv::Vec3b>(y+yy_,x+xx_)=top64x64_.at<cv::Vec3b>(p_.y-topLeftY_,p_.x-topLeftX_);
+        }
+      }
+      static auto rotCntr_ {0};
+      cv::imwrite("rotRef+"+std::to_string(rotCntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",rotRef_);
+      cv::imwrite("rotRefAll+"+std::to_string(rotCntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",rotRefAll_);
+      ++rotCntr_;
+
       cv::Mat ref32x32Img_=cv::Mat(32,32,CV_8UC3);
       cv::Mat ref32x32ImgSrc_=cv::Mat(32,32,CV_8UC3);
+      static auto cntr_ {0};
       for(auto J_=0;J_<32;++J_){
         for(auto K_=0;K_<32;++K_){
           ref32x32ImgSrc_.at<cv::Vec3b>(J_,K_)=imgBgr2.at<cv::Vec3b>(J_+y,K_+x);
           refImgSrc_.at<cv::Vec3b>(J_+y,K_+x)=imgBgr2.at<cv::Vec3b>(J_+y,K_+x);
           if (srcX[J_][K_] >= 0 && srcX[J_][K_] < imgBgr2.cols && srcY[J_][K_] >= 0 && srcY[J_][K_] < imgBgr2.rows) {
-              imgOut.at<cv::Vec3b>(J_+y,K_+x) = imgBgr2.at<cv::Vec3b>(cv::Point(srcX[J_][K_], srcY[J_][K_]));
-              ref32x32Img_.at<cv::Vec3b>(J_,K_)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
-              refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
+            imgOut.at<cv::Vec3b>(J_+y,K_+x) = imgBgr2.at<cv::Vec3b>(cv::Point(srcX[J_][K_], srcY[J_][K_]));
+            ref32x32Img_.at<cv::Vec3b>(J_,K_)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
+            refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
+            if(201==cntr_){
+              cv::Point p_=cv::Point(srcX[J_][K_], srcY[J_][K_]);
+              ofs201<<"x: "<< p_.x << ", y: " << p_.y << ", val: " << imgOut.at<cv::Vec3b>(J_+y,K_+x) << '\n';
+            }
           } else {
-              imgOut.at<cv::Vec3b>(J_+y,K_+x) = 0x0;
-              ref32x32Img_.at<cv::Vec3b>(J_,K_)=0x0;
-              refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=0x0;
+            imgOut.at<cv::Vec3b>(J_+y,K_+x) = 0x0;
+            ref32x32Img_.at<cv::Vec3b>(J_,K_)=0x0;
+            refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=0x0;
+            if(201==cntr_){
+              cv::Point p_=cv::Point(srcX[J_][K_], srcY[J_][K_]);
+              ofs201<<"x: "<< p_.x << ", y: " << p_.y << ", val: " << 0 << '\n';
+            }
           }
         }
       }
-      static auto cntr_ {0};
       cv::imwrite("ref32x32+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",ref32x32Img_);
       cv::imwrite("ref32x32Src+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",ref32x32ImgSrc_);
       cv::imwrite("refRoi+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",refImgRoi_);
