@@ -8,6 +8,26 @@
 #include <fstream>
 #include <string>
 
+
+void yagizGolden(const cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize) {
+    dst = cv::Mat::zeros(dsize, src.type());
+    //std::cout << dst;
+    for (int y = 0; y < dsize.height; ++y) {
+        for (int x = 0; x < dsize.width; ++x) {    
+            float srcX = M.at<float>(0, 0) * x + M.at<float>(0, 1) * y + M.at<float>(0, 2);
+            float srcY = M.at<float>(1, 0) * x + M.at<float>(1, 1) * y + M.at<float>(1, 2);
+            if (srcX >= 0 && srcX < src.cols && srcY >= 0 && srcY < src.rows) {
+                dst.at<cv::Vec3b>(y, x) = src.at<cv::Vec3b>(cv::Point(srcX, srcY));
+            } else {
+                dst.at<cv::Vec3b>(y, x) = 0x80;
+            }
+        }
+        
+    }
+    //std::cout << src;
+    //std::cout << dst;
+}
+
 // GOLDEN
 cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, float angle, float scale) {
     float alpha = scale * cos(angle * CV_PI / 180.0);
@@ -159,7 +179,7 @@ int main()
             refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=0x0;
             if(201==cntr_){
               cv::Point p_=cv::Point(srcX[J_][K_], srcY[J_][K_]);
-              ofs201<<"x: "<< p_.x << ", y: " << p_.y << ", val: " << 0 << '\n';
+              ofs201<<"x: "<< p_.x << ", y: " << p_.y << ", val: " << 0 << " (out of bounds) " << "xf: " << srcX[J_][K_] << ", yf: " << srcY[J_][K_] << '\n';
             }
           }
         }
@@ -326,6 +346,28 @@ int main()
     }
   }
   cv::imwrite("hls.png",imgBgrNewOut_);
+
+  //
+  cv::Mat imgYagiz = cv::imread("/tmp/image.png");
+  if(imgYagiz.empty()){
+    std::cout << "Failed to read image \n";
+    return -1;
+  }
+  cv::Mat imgYagizOut(imgYagiz.size(),CV_8UC3);
+  yagizGolden(imgYagiz,imgYagizOut,M,imgYagiz.size());
+  std::ofstream ofsRef439x0 {"ref439x0.txt"};
+  ofsRef439x0<<"y: 0, x: 439 "<<imgYagiz.at<cv::Vec3b>(0,439)<<'\n';
+  ofsRef439x0<<"y: 439, x: 0 "<<imgYagiz.at<cv::Vec3b>(439,0)<<'\n';
+  ofsRef439x0<<"y: 0, x: 438 "<<imgYagiz.at<cv::Vec3b>(0,438)<<'\n';
+  ofsRef439x0<<"y: 438, x: 0 "<<imgYagiz.at<cv::Vec3b>(438,0)<<'\n';
+
+  ofsRef439x0<<"--------------------------------------------------"<<'\n';
+
+  ofsRef439x0<<"y: 0, x: 439 "<<imgYagizOut.at<cv::Vec3b>(0,439)<<'\n';
+  ofsRef439x0<<"y: 439, x: 0 "<<imgYagizOut.at<cv::Vec3b>(439,0)<<'\n';
+  ofsRef439x0<<"y: 0, x: 438 "<<imgYagizOut.at<cv::Vec3b>(0,438)<<'\n';
+  ofsRef439x0<<"y: 438, x: 0 "<<imgYagizOut.at<cv::Vec3b>(438,0)<<'\n';
+  cv::imwrite("imgYagiz.png",imgYagizOut);
 
   return 0;
 }

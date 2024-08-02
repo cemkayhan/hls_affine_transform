@@ -204,6 +204,7 @@ static void Func2(
 
   cv::Mat rotHlsAll_=cv::Mat::zeros(Height,Width,CV_8UC3);
 
+      std::ofstream ofs201 {"hls201.txt"};
   loopRows: for(auto J_=0;J_<Height;J_+=BLOCK_SIZE_){
 #pragma HLS LOOP_TRIPCOUNT min=MAX_ROWS_/BLOCK_SIZE_ max=MAX_ROWS_/BLOCK_SIZE_
 
@@ -254,6 +255,7 @@ static void Func2(
 
       std::ofstream ofs {"hlsXY2+"+std::to_string(J_)+"+"+std::to_string(K_)+".txt"};
       cv::Mat rotHls_=cv::Mat(32,32,CV_8UC3);
+      static auto cntrX_{0};
       loopBlockRows2: for(auto JJ_=0;JJ_<BLOCK_SIZE_;++JJ_){
         loopBlockCols2: for(auto KK_=0;KK_<(BLOCK_SIZE_/STRM_INTR_PPC_);++KK_){
 #pragma HLS PIPELINE II=1
@@ -279,6 +281,13 @@ static void Func2(
               pix_[2]=tmpPix_(23,16);
               rotHls_.at<cv::Vec3b>(JJ_,KK_*STRM_INTR_PPC_+II_)=pix_;
               rotHlsAll_.at<cv::Vec3b>(J_+JJ_,K_+KK_*STRM_INTR_PPC_+II_)=pix_;
+              if(201==cntrX_){
+                if(0==pix_[0]&&0==pix_[1]&&0==pix_[2]){
+                  ofs201<<"x: "<<ap_int<16> {srcXStream_(II_*16+15,II_*16)}<<", y: " <<ap_int<16> {srcYStream_(II_*16+15,II_*16)}<<", val: "<<0<<'\n';
+                } else {
+                  ofs201<<"x: "<<ap_int<16> {srcXStream_(II_*16+15,II_*16)}<<", y: " <<ap_int<16> {srcYStream_(II_*16+15,II_*16)}<<", val: "<<pix_<<'\n';
+                }
+              }
             } else {
               srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=0x0;
               cv::Vec3b pix_;
@@ -287,12 +296,14 @@ static void Func2(
               pix_[2]=0;
               rotHls_.at<cv::Vec3b>(JJ_,KK_*STRM_INTR_PPC_+II_)=pix_;
               rotHlsAll_.at<cv::Vec3b>(J_+JJ_,K_+KK_*STRM_INTR_PPC_+II_)=pix_;
+              if(201==cntrX_){
+                ofs201<<"x: "<<ap_int<16> {srcXStream_(II_*16+15,II_*16)}<<", y: " <<ap_int<16> {srcYStream_(II_*16+15,II_*16)}<<", val: "<<0<<'\n';
+              }
             }
           }
           srcStream<<srcStreamPix_;
         }
       }
-      static auto cntrX_{0};
       cv::imwrite("rotHls+"+std::to_string(cntrX_)+"+"+std::to_string(J_)+"+"+std::to_string(K_)+".png",rotHls_);
       cv::imwrite("rotHlsAll+"+std::to_string(cntrX_)+"+"+std::to_string(J_)+"+"+std::to_string(K_)+".png",rotHlsAll_);
       ++cntrX_;
