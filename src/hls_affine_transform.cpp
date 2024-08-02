@@ -1,7 +1,13 @@
 #include "hls_affine_transform.h"
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+
+
 #include <fstream>
-#include <assert.h>
+#include <string>
 
 template<int STRM_OUT_CHANNELS_,int DEPTH_,int STRM_OUT_PPC_,int MAX_COLS_,int MAX_ROWS_>
 static void Func5(
@@ -134,6 +140,7 @@ static void Func1(
 ){
 #pragma HLS INLINE off
 
+  std::ofstream ofs2 {"topLeftHls.txt"};
   loopRows: for(auto J_=0;J_<Height;J_+=BLOCK_SIZE_){
 #pragma HLS LOOP_TRIPCOUNT min=MAX_ROWS_/BLOCK_SIZE_ max=MAX_ROWS_/BLOCK_SIZE_
 
@@ -145,6 +152,7 @@ static void Func1(
       ap_int<16> topLeftX_;
       ap_int<16> topLeftY_;
 
+      std::ofstream ofs {"hlsXY+"+std::to_string(J_)+"+"+std::to_string(K_)+".txt"};
       loopBlockRows: for(auto JJ_=0;JJ_<BLOCK_SIZE_;++JJ_){
         loopBlockCols: for(auto KK_=0;KK_<(BLOCK_SIZE_/STRM_INTR_PPC_);++KK_){
           ap_int<16*STRM_INTR_PPC_> SrcX_;
@@ -152,19 +160,22 @@ static void Func1(
           for(auto II_=0;II_<STRM_INTR_PPC_;++II_){
 #pragma HLS PIPELINE II=1
 
+            float fx_ = Fpt_Func(rotMat00)*((KK_*STRM_INTR_PPC_+II_)+K_)+Fpt_Func(rotMat01)*(JJ_+J_)+Fpt_Func(rotMat02);
+            float fy_ = Fpt_Func(rotMat10)*((KK_*STRM_INTR_PPC_+II_)+K_)+Fpt_Func(rotMat11)*(JJ_+J_)+Fpt_Func(rotMat12);
             SrcX_(II_*16+15,II_*16)=static_cast<ap_int<16>>(Fpt_Func(rotMat00)*((KK_*STRM_INTR_PPC_+II_)+K_)+Fpt_Func(rotMat01)*(JJ_+J_)+Fpt_Func(rotMat02));
             SrcY_(II_*16+15,II_*16)=static_cast<ap_int<16>>(Fpt_Func(rotMat10)*((KK_*STRM_INTR_PPC_+II_)+K_)+Fpt_Func(rotMat11)*(JJ_+J_)+Fpt_Func(rotMat12));
+            ofs << "X: " << ap_int<16> {SrcX_(II_*16+15,II_*16)} << ", Y: " << ap_int<16> {SrcY_(II_*16+15,II_*16)} << '\n';
             if(!topLeftXSet_){
               topLeftXSet_=true;
-              topLeftX_=SrcX_(II_*16+15,II_*16);
+              topLeftX_=ap_int<16> {SrcX_(II_*16+15,II_*16)};
             } else if(topLeftX_>ap_int<16> {SrcX_(II_*16+15,II_*16)}){
-              topLeftX_=SrcX_(II_*16+15,II_*16);
+              topLeftX_=ap_int<16> {SrcX_(II_*16+15,II_*16)};
             }
             if(!topLeftYSet_){
               topLeftYSet_=true;
-              topLeftY_=SrcY_(II_*16+15,II_*16);
+              topLeftY_=ap_uint<16> {SrcY_(II_*16+15,II_*16)};
             } else if(topLeftY_>ap_int<16> {SrcY_(II_*16+15,II_*16)}){
-              topLeftY_=SrcY_(II_*16+15,II_*16);
+              topLeftY_=ap_uint<16> {SrcY_(II_*16+15,II_*16)};
             }
           }
           srcXStream.write(SrcX_);
@@ -173,6 +184,7 @@ static void Func1(
       }
       topLeftX.write(topLeftX_);
       topLeftY.write(topLeftY_);
+      ofs2<<"tX: "<<topLeftX_<<", tY: "<<topLeftY_<<'\n';
     }
   }
 }
@@ -189,6 +201,8 @@ static void Func2(
   hls::stream<ap_int<16>>& topLeftY
 ){
 #pragma HLS INLINE off
+
+  cv::Mat rotHlsAll_=cv::Mat::zeros(Height,Width,CV_8UC3);
 
   loopRows: for(auto J_=0;J_<Height;J_+=BLOCK_SIZE_){
 #pragma HLS LOOP_TRIPCOUNT min=MAX_ROWS_/BLOCK_SIZE_ max=MAX_ROWS_/BLOCK_SIZE_
@@ -214,6 +228,7 @@ static void Func2(
 #pragma HLS ARRAY_PARTITION variable=tmp_ type=cyclic factor=8 dim=2
 #pragma HLS BIND_STORAGE variable=tmp_ type=RAM_T2P impl=URAM
 
+      cv::Mat tmpImgHls_=cv::Mat(2*BLOCK_SIZE_,2*BLOCK_SIZE_,CV_8UC3);
       loopBlockRows: for(auto JJ_=0;JJ_<(2*BLOCK_SIZE_);++JJ_){
         loopBlockCols: for(auto KK_=0;KK_<((2*BLOCK_SIZE_)/MM_PPC_);++KK_){
 #pragma HLS PIPELINE II=1
@@ -223,12 +238,22 @@ static void Func2(
           const auto pix_=srcAxi[index_];
           loopBlockColsPpc: for(auto II_=0;II_<MM_PPC_;++II_){
             tmp_[JJ_][KK_*MM_PPC_+II_]=pix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_);
+            cv::Vec3b pix_;
+            pix_[0]=tmp_[JJ_][KK_*MM_PPC_+II_](7,0);
+            pix_[1]=tmp_[JJ_][KK_*MM_PPC_+II_](15,8);
+            pix_[2]=tmp_[JJ_][KK_*MM_PPC_+II_](23,16);
+            tmpImgHls_.at<cv::Vec3b>(JJ_,KK_*MM_PPC_+II_)=pix_;
           }
         }
       }
+      static auto cntr_ {0};
+      cv::imwrite("tmpImgHls+"+std::to_string(cntr_)+"+"+std::to_string(J_)+"+"+std::to_string(K_)+".png",tmpImgHls_);
+      ++cntr_;
 
       const auto tmpTmp2_ {(MM_PPC_>1) ? topLeftX_(Pow2<MM_PPC_>::Value-1,0) : 0};
 
+      std::ofstream ofs {"hlsXY2+"+std::to_string(J_)+"+"+std::to_string(K_)+".txt"};
+      cv::Mat rotHls_=cv::Mat(32,32,CV_8UC3);
       loopBlockRows2: for(auto JJ_=0;JJ_<BLOCK_SIZE_;++JJ_){
         loopBlockCols2: for(auto KK_=0;KK_<(BLOCK_SIZE_/STRM_INTR_PPC_);++KK_){
 #pragma HLS PIPELINE II=1
@@ -239,19 +264,38 @@ static void Func2(
           srcXStream>>srcXStream_;
           srcYStream>>srcYStream_;
           loopStrmPpc: for(auto II_=0;II_<STRM_INTR_PPC_;++II_){
+            ofs << "X: " << ap_int<16> {srcXStream_(II_*16+15,II_*16)} << ", Y: " << ap_int<16> {srcYStream_(II_*16+15,II_*16)} << '\n';
             if((topLeftY_+ROWS_MARGIN_)>=0&&topLeftY_<MAX_ROWS_&&(topLeftX_+COLS_MARGIN_)>=0&&topLeftX_<MAX_COLS_){
               const auto index1_ {(ap_int<16> {srcYStream_(II_*16+15,II_*16)}+ROWS_MARGIN_)-(topLeftY_+ROWS_MARGIN_)};
               assert((index1_>=0 && index1_<(2*BLOCK_SIZE_)) && "out of range error");
               const auto index2_ {(ap_int<16> {srcXStream_(II_*16+15,II_*16)}+tmpTmp2_+COLS_MARGIN_)-(topLeftX_+COLS_MARGIN_)};
               assert((index2_>=0 && index2_<(2*BLOCK_SIZE_)) && "out of range error");
+              ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,1>::Value> tmpPix_;
               srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=tmp_[index1_][index2_];
+              tmpPix_=tmp_[index1_][index2_];
+              cv::Vec3b pix_;
+              pix_[0]=tmpPix_(7,0);
+              pix_[1]=tmpPix_(15,8);
+              pix_[2]=tmpPix_(23,16);
+              rotHls_.at<cv::Vec3b>(JJ_,KK_*STRM_INTR_PPC_+II_)=pix_;
+              rotHlsAll_.at<cv::Vec3b>(J_+JJ_,K_+KK_*STRM_INTR_PPC_+II_)=pix_;
             } else {
               srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=0x0;
+              cv::Vec3b pix_;
+              pix_[0]=0;
+              pix_[1]=0;
+              pix_[2]=0;
+              rotHls_.at<cv::Vec3b>(JJ_,KK_*STRM_INTR_PPC_+II_)=pix_;
+              rotHlsAll_.at<cv::Vec3b>(J_+JJ_,K_+KK_*STRM_INTR_PPC_+II_)=pix_;
             }
           }
           srcStream<<srcStreamPix_;
         }
       }
+      static auto cntrX_{0};
+      cv::imwrite("rotHls+"+std::to_string(cntrX_)+"+"+std::to_string(J_)+"+"+std::to_string(K_)+".png",rotHls_);
+      cv::imwrite("rotHlsAll+"+std::to_string(cntrX_)+"+"+std::to_string(J_)+"+"+std::to_string(K_)+".png",rotHlsAll_);
+      ++cntrX_;
     }
   }
 }

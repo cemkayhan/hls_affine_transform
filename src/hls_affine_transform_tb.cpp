@@ -29,6 +29,7 @@ int main()
 {
   cv::Mat imgBgr = cv::imread("/tmp/image.png");
   cv::Mat imgBgr2 = cv::imread("/tmp/image.png");
+  cv::Mat imgBgr3 = cv::imread("/tmp/image.png");
 
   if(imgBgr2.empty()){
     std::cout << "Failed to read image \n";
@@ -38,10 +39,14 @@ int main()
     std::cout << "Failed to read image \n";
     return -1;
   }
+  if(imgBgr3.empty()){
+    std::cout << "Failed to read image \n";
+    return -1;
+  }
 
   // GOLDEN
   float goldenscale = 1.0;
-  float goldenangle = 129.0;
+  float goldenangle = D_GOLDENANGLE_;
 
   // Döndürme matrisi oluştur
   cv::Point2f goldencenter(imgBgr.cols / 2.0, imgBgr.rows / 2.0);
@@ -52,27 +57,93 @@ int main()
   cv::Mat imgOut=cv::Mat::zeros(imgBgr2.size(),imgBgr2.type());
   //imgOut=cv::Mat(imgBgr.size(),imgBgr.type());
 
+  cv::Mat imgOutExt_=cv::Mat::zeros(cv::Size(64+imgBgr2.cols+64,64+imgBgr2.rows+64),imgBgr3.type());
+  for (int y = 0; y < imgBgr.rows; y++) {
+    for (int x = 0; x < imgBgr.cols; x++) {
+      imgOutExt_.at<cv::Vec3b>(64+y,64+x)=imgBgr3.at<cv::Vec3b>(y,x);
+    }
+  }
+  cv::imwrite("imgOutExt.png",imgOutExt_);
+
 #if 1
+  std::ofstream ofs2 {"topLeftRef.txt"};
+  cv::Mat refImgSrc_=cv::Mat(imgBgr2.size(),CV_8UC3);
+  cv::Mat refImgRoi_=cv::Mat::zeros(imgBgr2.size(),CV_8UC3);
   for (int y = 0; y < imgBgr.rows; y+=32) {
     for (int x = 0; x < imgBgr.cols; x+=32) {
       float srcX[32][32];
       float srcY[32][32];
+      std::ofstream ofs {"refXY+"+std::to_string(y)+"+"+std::to_string(x)+".txt"};
+
+      auto topLeftXSet_ {false};
+      auto topLeftYSet_ {false};
+      int topLeftX_;
+      int topLeftY_;
+
       for(auto J=0;J<32;++J){
         for(auto K=0;K<32;++K){
           srcX[J][K] = M.at<float>(0, 0) * (K+x) + M.at<float>(0, 1) * (J+y) + M.at<float>(0, 2);
           srcY[J][K] = M.at<float>(1, 0) * (K+x) + M.at<float>(1, 1) * (J+y) + M.at<float>(1, 2);
+          const auto p_ {cv::Point(srcX[J][K],srcY[J][K])};
+          if(!topLeftXSet_){
+            topLeftXSet_=true;
+            topLeftX_=p_.x;
+          } else if(topLeftX_>p_.x){
+            topLeftX_=p_.x;
+          }
+          if(!topLeftYSet_){
+            topLeftYSet_=true;
+            topLeftY_=p_.y;
+          } else if(topLeftY_>p_.y){
+            topLeftY_=p_.y;
+          }
+          ofs << "X: " << p_.x << ", Y: " << p_.y << '\n';
         }
       }
+      ofs2<<"tX: "<<topLeftX_<<", tY: "<<topLeftY_<<'\n';
 
-      for(auto J=0;J<32;++J){
-        for(auto K=0;K<32;++K){
-          if (srcX[J][K] >= 0 && srcX[J][K] < imgBgr2.cols && srcY[J][K] >= 0 && srcY[J][K] < imgBgr2.rows) {
-              imgOut.at<cv::Vec3b>(J+y,K+x) = imgBgr2.at<cv::Vec3b>(cv::Point(srcX[J][K], srcY[J][K]));
+      int topLeftXAxi_;
+      int topLeftYAxi_;
+      if((topLeftY_+64)>=0&&topLeftY_<imgOut.rows&&(topLeftX_+64)>=0&&topLeftX_<imgOut.cols){
+        topLeftXAxi_=topLeftX_;
+        topLeftYAxi_=topLeftY_;
+      } else {
+        topLeftXAxi_=-64;
+        topLeftYAxi_=-64;
+      }
+      cv::Mat top64x64_=cv::Mat::zeros(64,64,CV_8UC3);
+      for(auto JJ_=topLeftYAxi_;JJ_<topLeftYAxi_+64;++JJ_){
+        for(auto KK_=topLeftXAxi_;KK_<topLeftXAxi_+64;++KK_){
+          top64x64_.at<cv::Vec3b>(JJ_-topLeftYAxi_,KK_-topLeftXAxi_)=imgOutExt_.at<cv::Vec3b>(JJ_+64,KK_+64);
+        }
+      }
+      static auto cntr3_ {0};
+      cv::imwrite("topRef64x64+"+std::to_string(cntr3_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",top64x64_);
+      ++cntr3_;
+
+      cv::Mat ref32x32Img_=cv::Mat(32,32,CV_8UC3);
+      cv::Mat ref32x32ImgSrc_=cv::Mat(32,32,CV_8UC3);
+      for(auto J_=0;J_<32;++J_){
+        for(auto K_=0;K_<32;++K_){
+          ref32x32ImgSrc_.at<cv::Vec3b>(J_,K_)=imgBgr2.at<cv::Vec3b>(J_+y,K_+x);
+          refImgSrc_.at<cv::Vec3b>(J_+y,K_+x)=imgBgr2.at<cv::Vec3b>(J_+y,K_+x);
+          if (srcX[J_][K_] >= 0 && srcX[J_][K_] < imgBgr2.cols && srcY[J_][K_] >= 0 && srcY[J_][K_] < imgBgr2.rows) {
+              imgOut.at<cv::Vec3b>(J_+y,K_+x) = imgBgr2.at<cv::Vec3b>(cv::Point(srcX[J_][K_], srcY[J_][K_]));
+              ref32x32Img_.at<cv::Vec3b>(J_,K_)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
+              refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
           } else {
-              imgOut.at<cv::Vec3b>(J+y,K+x) = 0x0;
+              imgOut.at<cv::Vec3b>(J_+y,K_+x) = 0x0;
+              ref32x32Img_.at<cv::Vec3b>(J_,K_)=0x0;
+              refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=0x0;
           }
         }
       }
+      static auto cntr_ {0};
+      cv::imwrite("ref32x32+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",ref32x32Img_);
+      cv::imwrite("ref32x32Src+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",ref32x32ImgSrc_);
+      cv::imwrite("refRoi+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",refImgRoi_);
+      cv::imwrite("refSrc+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",refImgSrc_);
+      ++cntr_;
     }
   }
 #endif

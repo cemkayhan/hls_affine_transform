@@ -12,6 +12,8 @@
 #include "type_width.h"
 #include "fpt_func.h"
 
+#include <assert.h>
+
 #define D_AFFRDAXI_DEPTH_ ((D_MAX_STRIDE_/D_MM_PPC_)*(2*D_BLOCK_SIZE_+D_MAX_ROWS_+2*D_BLOCK_SIZE_))
 #define D_VIDWRAXI_DEPTH_ ((D_MAX_STRIDE_/D_MM_PPC_)*(2*D_BLOCK_SIZE_+D_MAX_ROWS_+2*D_BLOCK_SIZE_))
 #define D_AFFWRAXI_DEPTH_ ((D_MAX_STRIDE_/D_MM_PPC_)*(2*D_BLOCK_SIZE_+D_MAX_ROWS_+2*D_BLOCK_SIZE_))
