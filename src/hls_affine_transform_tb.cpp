@@ -327,12 +327,12 @@ int main()
 
   cv::Mat imgBgrNewOut_;
   imgBgrNewOut_=cv::Mat(imgBgr.size(),imgBgr.type());
-  std::ofstream ofs {"log.txt"};
+  //std::ofstream ofs {"log.txt"};
   for(auto J_=0;J_<imgBgr.rows;++J_){
     for(auto K_=0;K_<imgBgr.cols/D_STRM_OUT_PPC_;++K_){
       ap_axiu<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,D_STRM_OUT_PPC_>::Value,1,1,1> dstStreamPix_;
       dstStream_>>dstStreamPix_;
-      ofs<<"J_: "<<J_<<", K_: "<<K_<<", last: "<<dstStreamPix_.last<<", user: "<<dstStreamPix_.user<<'\n';
+      //ofs<<"J_: "<<J_<<", K_: "<<K_<<", last: "<<dstStreamPix_.last<<", user: "<<dstStreamPix_.user<<'\n';
       for(auto Z_=0;Z_<D_STRM_OUT_PPC_;++Z_){
         ap_uint<Axi_Vid_Bus_Width<D_STRM_OUT_CHANNELS_,D_DEPTH_,1>::Value> pix_;
         pix_=dstStreamPix_.data(Z_*D_STRM_OUT_CHANNELS_*D_DEPTH_+D_STRM_OUT_CHANNELS_*D_DEPTH_-1,Z_*D_STRM_OUT_CHANNELS_*D_DEPTH_);
