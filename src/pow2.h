@@ -1,5 +1,5 @@
-#ifndef POW2_H_INCLUDE_GUARD
-#define POW2_H_INCLUDE_GUARD
+#ifndef POW2_H_INCLUDE_GUARD_
+#define POW2_H_INCLUDE_GUARD_
 
 template<int N_>
 struct Pow2

@@ -1,5 +1,5 @@
-#ifndef FP_T_FUNCTION_H_INCLUDE_GUARD_
-#define FP_T_FUNCTION_H_INCLUDE_GUARD_
+#ifndef FP_T_FUNC_H_INCLUDE_GUARD_
+#define FP_T_FUNC_H_INCLUDE_GUARD_
 
 #include "type_width.h"
 

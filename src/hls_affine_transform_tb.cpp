@@ -8,7 +8,6 @@
 #include <fstream>
 #include <string>
 
-
 void yagizGolden(const cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size dsize) {
     dst = cv::Mat::zeros(dsize, src.type());
     //std::cout << dst;
@@ -86,109 +85,109 @@ int main()
   cv::imwrite("imgOutExt.png",imgOutExt_);
 
 #if 1
-  std::ofstream ofs201 {"ref201.txt"};
-  std::ofstream ofs2 {"topLeftRef.txt"};
-  cv::Mat refImgSrc_=cv::Mat(imgBgr2.size(),CV_8UC3);
-  cv::Mat refImgRoi_=cv::Mat::zeros(imgBgr2.size(),CV_8UC3);
+  //std::ofstream ofs201 {"ref201.txt"};
+  //std::ofstream ofs2 {"topLeftRef.txt"};
+  //cv::Mat refImgSrc_=cv::Mat(imgBgr2.size(),CV_8UC3);
+  //cv::Mat refImgRoi_=cv::Mat::zeros(imgBgr2.size(),CV_8UC3);
 
-  cv::Mat rotRefAll_=cv::Mat(cv::Size(imgBgr2.size()),CV_8UC3);
+  //cv::Mat rotRefAll_=cv::Mat(cv::Size(imgBgr2.size()),CV_8UC3);
 
   for (int y = 0; y < imgBgr.rows; y+=32) {
     for (int x = 0; x < imgBgr.cols; x+=32) {
       float srcX[32][32];
       float srcY[32][32];
-      std::ofstream ofs {"refXY+"+std::to_string(y)+"+"+std::to_string(x)+".txt"};
+      //std::ofstream ofs {"refXY+"+std::to_string(y)+"+"+std::to_string(x)+".txt"};
 
-      auto topLeftXSet_ {false};
-      auto topLeftYSet_ {false};
-      int topLeftX_;
-      int topLeftY_;
+      //auto topLeftXSet_ {false};
+      //auto topLeftYSet_ {false};
+      //int topLeftX_;
+      //int topLeftY_;
 
       for(auto J=0;J<32;++J){
         for(auto K=0;K<32;++K){
           srcX[J][K] = M.at<float>(0, 0) * (K+x) + M.at<float>(0, 1) * (J+y) + M.at<float>(0, 2);
           srcY[J][K] = M.at<float>(1, 0) * (K+x) + M.at<float>(1, 1) * (J+y) + M.at<float>(1, 2);
-          const auto p_ {cv::Point(srcX[J][K],srcY[J][K])};
-          if(!topLeftXSet_){
-            topLeftXSet_=true;
-            topLeftX_=p_.x;
-          } else if(topLeftX_>p_.x){
-            topLeftX_=p_.x;
-          }
-          if(!topLeftYSet_){
-            topLeftYSet_=true;
-            topLeftY_=p_.y;
-          } else if(topLeftY_>p_.y){
-            topLeftY_=p_.y;
-          }
-          ofs << "X: " << p_.x << ", Y: " << p_.y << '\n';
+          //const auto p_ {cv::Point(srcX[J][K],srcY[J][K])};
+          //if(!topLeftXSet_){
+          //  topLeftXSet_=true;
+          //  topLeftX_=p_.x;
+          //} else if(topLeftX_>p_.x){
+          //  topLeftX_=p_.x;
+          //}
+          //if(!topLeftYSet_){
+          //  topLeftYSet_=true;
+          //  topLeftY_=p_.y;
+          //} else if(topLeftY_>p_.y){
+          //  topLeftY_=p_.y;
+          //}
+          //ofs << "X: " << p_.x << ", Y: " << p_.y << '\n';
         }
       }
-      ofs2<<"tX: "<<topLeftX_<<", tY: "<<topLeftY_<<'\n';
+      //ofs2<<"tX: "<<topLeftX_<<", tY: "<<topLeftY_<<'\n';
 
-      int topLeftXAxi_;
-      int topLeftYAxi_;
-      if((topLeftY_+64)>=0&&topLeftY_<imgOut.rows&&(topLeftX_+64)>=0&&topLeftX_<imgOut.cols){
-        topLeftXAxi_=topLeftX_;
-        topLeftYAxi_=topLeftY_;
-      } else {
-        topLeftXAxi_=-64;
-        topLeftYAxi_=-64;
-      }
-      cv::Mat top64x64_=cv::Mat::zeros(64,64,CV_8UC3);
-      for(auto JJ_=topLeftYAxi_;JJ_<topLeftYAxi_+64;++JJ_){
-        for(auto KK_=topLeftXAxi_;KK_<topLeftXAxi_+64;++KK_){
-          top64x64_.at<cv::Vec3b>(JJ_-topLeftYAxi_,KK_-topLeftXAxi_)=imgOutExt_.at<cv::Vec3b>(JJ_+64,KK_+64);
-        }
-      }
-      static auto cntr3_ {0};
-      cv::imwrite("topRef64x64+"+std::to_string(cntr3_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",top64x64_);
-      ++cntr3_;
+      //int topLeftXAxi_;
+      //int topLeftYAxi_;
+      //if((topLeftY_+64)>=0&&topLeftY_<imgOut.rows&&(topLeftX_+64)>=0&&topLeftX_<imgOut.cols){
+      //  topLeftXAxi_=topLeftX_;
+      //  topLeftYAxi_=topLeftY_;
+      //} else {
+      //  topLeftXAxi_=-64;
+      //  topLeftYAxi_=-64;
+      //}
+      //cv::Mat top64x64_=cv::Mat::zeros(64,64,CV_8UC3);
+      //for(auto JJ_=topLeftYAxi_;JJ_<topLeftYAxi_+64;++JJ_){
+      //  for(auto KK_=topLeftXAxi_;KK_<topLeftXAxi_+64;++KK_){
+      //    top64x64_.at<cv::Vec3b>(JJ_-topLeftYAxi_,KK_-topLeftXAxi_)=imgOutExt_.at<cv::Vec3b>(JJ_+64,KK_+64);
+      //  }
+      //}
+      //static auto cntr3_ {0};
+      //cv::imwrite("topRef64x64+"+std::to_string(cntr3_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",top64x64_);
+      //++cntr3_;
 
-      cv::Mat rotRef_=cv::Mat(32,32,CV_8UC3);
-      for(auto yy_=0;yy_<32;++yy_){
-        for(auto xx_=0;xx_<32;++xx_){
-          const auto p_ {cv::Point(srcX[yy_][xx_],srcY[yy_][xx_])};
-          rotRef_.at<cv::Vec3b>(yy_,xx_)=top64x64_.at<cv::Vec3b>(p_.y-topLeftY_,p_.x-topLeftX_);
-          rotRefAll_.at<cv::Vec3b>(y+yy_,x+xx_)=top64x64_.at<cv::Vec3b>(p_.y-topLeftY_,p_.x-topLeftX_);
-        }
-      }
-      static auto rotCntr_ {0};
-      cv::imwrite("rotRef+"+std::to_string(rotCntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",rotRef_);
-      cv::imwrite("rotRefAll+"+std::to_string(rotCntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",rotRefAll_);
-      ++rotCntr_;
+      //cv::Mat rotRef_=cv::Mat(32,32,CV_8UC3);
+      //for(auto yy_=0;yy_<32;++yy_){
+      //  for(auto xx_=0;xx_<32;++xx_){
+      //    const auto p_ {cv::Point(srcX[yy_][xx_],srcY[yy_][xx_])};
+      //    rotRef_.at<cv::Vec3b>(yy_,xx_)=top64x64_.at<cv::Vec3b>(p_.y-topLeftY_,p_.x-topLeftX_);
+      //    rotRefAll_.at<cv::Vec3b>(y+yy_,x+xx_)=top64x64_.at<cv::Vec3b>(p_.y-topLeftY_,p_.x-topLeftX_);
+      //  }
+      //}
+      //static auto rotCntr_ {0};
+      //cv::imwrite("rotRef+"+std::to_string(rotCntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",rotRef_);
+      //cv::imwrite("rotRefAll+"+std::to_string(rotCntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",rotRefAll_);
+      //++rotCntr_;
 
-      cv::Mat ref32x32Img_=cv::Mat(32,32,CV_8UC3);
-      cv::Mat ref32x32ImgSrc_=cv::Mat(32,32,CV_8UC3);
+      //cv::Mat ref32x32Img_=cv::Mat(32,32,CV_8UC3);
+      //cv::Mat ref32x32ImgSrc_=cv::Mat(32,32,CV_8UC3);
       static auto cntr_ {0};
       for(auto J_=0;J_<32;++J_){
         for(auto K_=0;K_<32;++K_){
-          ref32x32ImgSrc_.at<cv::Vec3b>(J_,K_)=imgBgr2.at<cv::Vec3b>(J_+y,K_+x);
-          refImgSrc_.at<cv::Vec3b>(J_+y,K_+x)=imgBgr2.at<cv::Vec3b>(J_+y,K_+x);
+          //ref32x32ImgSrc_.at<cv::Vec3b>(J_,K_)=imgBgr2.at<cv::Vec3b>(J_+y,K_+x);
+          //refImgSrc_.at<cv::Vec3b>(J_+y,K_+x)=imgBgr2.at<cv::Vec3b>(J_+y,K_+x);
           if (srcX[J_][K_] >= 0 && srcX[J_][K_] < imgBgr2.cols && srcY[J_][K_] >= 0 && srcY[J_][K_] < imgBgr2.rows) {
             imgOut.at<cv::Vec3b>(J_+y,K_+x) = imgBgr2.at<cv::Vec3b>(cv::Point(srcX[J_][K_], srcY[J_][K_]));
-            ref32x32Img_.at<cv::Vec3b>(J_,K_)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
-            refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
-            if(201==cntr_){
-              cv::Point p_=cv::Point(srcX[J_][K_], srcY[J_][K_]);
-              ofs201<<"x: "<< p_.x << ", y: " << p_.y << ", val: " << imgOut.at<cv::Vec3b>(J_+y,K_+x) << '\n';
-            }
+            //ref32x32Img_.at<cv::Vec3b>(J_,K_)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
+            //refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=imgOut.at<cv::Vec3b>(J_+y,K_+x);
+            //if(201==cntr_){
+            //  cv::Point p_=cv::Point(srcX[J_][K_], srcY[J_][K_]);
+            //  ofs201<<"x: "<< p_.x << ", y: " << p_.y << ", val: " << imgOut.at<cv::Vec3b>(J_+y,K_+x) << '\n';
+            //}
           } else {
             imgOut.at<cv::Vec3b>(J_+y,K_+x) = 0x0;
-            ref32x32Img_.at<cv::Vec3b>(J_,K_)=0x0;
-            refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=0x0;
-            if(201==cntr_){
-              cv::Point p_=cv::Point(srcX[J_][K_], srcY[J_][K_]);
-              ofs201<<"x: "<< p_.x << ", y: " << p_.y << ", val: " << 0 << " (out of bounds) " << "xf: " << srcX[J_][K_] << ", yf: " << srcY[J_][K_] << '\n';
-            }
+            //ref32x32Img_.at<cv::Vec3b>(J_,K_)=0x0;
+            //refImgRoi_.at<cv::Vec3b>(J_+y,K_+x)=0x0;
+            //if(201==cntr_){
+            //  cv::Point p_=cv::Point(srcX[J_][K_], srcY[J_][K_]);
+            //  ofs201<<"x: "<< p_.x << ", y: " << p_.y << ", val: " << 0 << " (out of bounds) " << "xf: " << srcX[J_][K_] << ", yf: " << srcY[J_][K_] << '\n';
+            //}
           }
         }
       }
-      cv::imwrite("ref32x32+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",ref32x32Img_);
-      cv::imwrite("ref32x32Src+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",ref32x32ImgSrc_);
-      cv::imwrite("refRoi+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",refImgRoi_);
-      cv::imwrite("refSrc+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",refImgSrc_);
-      ++cntr_;
+      //cv::imwrite("ref32x32+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",ref32x32Img_);
+      //cv::imwrite("ref32x32Src+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",ref32x32ImgSrc_);
+      //cv::imwrite("refRoi+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",refImgRoi_);
+      //cv::imwrite("refSrc+"+std::to_string(cntr_)+"+"+std::to_string(y)+"+"+std::to_string(x)+".png",refImgSrc_);
+      //++cntr_;
     }
   }
 #endif
@@ -348,26 +347,26 @@ int main()
   cv::imwrite("hls.png",imgBgrNewOut_);
 
   //
-  cv::Mat imgYagiz = cv::imread("/tmp/image.png");
-  if(imgYagiz.empty()){
-    std::cout << "Failed to read image \n";
-    return -1;
-  }
-  cv::Mat imgYagizOut(imgYagiz.size(),CV_8UC3);
-  yagizGolden(imgYagiz,imgYagizOut,M,imgYagiz.size());
-  std::ofstream ofsRef439x0 {"ref439x0.txt"};
-  ofsRef439x0<<"y: 0, x: 439 "<<imgYagiz.at<cv::Vec3b>(0,439)<<'\n';
-  ofsRef439x0<<"y: 439, x: 0 "<<imgYagiz.at<cv::Vec3b>(439,0)<<'\n';
-  ofsRef439x0<<"y: 0, x: 438 "<<imgYagiz.at<cv::Vec3b>(0,438)<<'\n';
-  ofsRef439x0<<"y: 438, x: 0 "<<imgYagiz.at<cv::Vec3b>(438,0)<<'\n';
+  //cv::Mat imgYagiz = cv::imread("/tmp/image.png");
+  //if(imgYagiz.empty()){
+  //  std::cout << "Failed to read image \n";
+  //  return -1;
+  //}
+  //cv::Mat imgYagizOut(imgYagiz.size(),CV_8UC3);
+  //yagizGolden(imgYagiz,imgYagizOut,M,imgYagiz.size());
+  //std::ofstream ofsRef439x0 {"ref439x0.txt"};
+  //ofsRef439x0<<"y: 0, x: 439 "<<imgYagiz.at<cv::Vec3b>(0,439)<<'\n';
+  //ofsRef439x0<<"y: 439, x: 0 "<<imgYagiz.at<cv::Vec3b>(439,0)<<'\n';
+  //ofsRef439x0<<"y: 0, x: 438 "<<imgYagiz.at<cv::Vec3b>(0,438)<<'\n';
+  //ofsRef439x0<<"y: 438, x: 0 "<<imgYagiz.at<cv::Vec3b>(438,0)<<'\n';
 
-  ofsRef439x0<<"--------------------------------------------------"<<'\n';
+  //ofsRef439x0<<"--------------------------------------------------"<<'\n';
 
-  ofsRef439x0<<"y: 0, x: 439 "<<imgYagizOut.at<cv::Vec3b>(0,439)<<'\n';
-  ofsRef439x0<<"y: 439, x: 0 "<<imgYagizOut.at<cv::Vec3b>(439,0)<<'\n';
-  ofsRef439x0<<"y: 0, x: 438 "<<imgYagizOut.at<cv::Vec3b>(0,438)<<'\n';
-  ofsRef439x0<<"y: 438, x: 0 "<<imgYagizOut.at<cv::Vec3b>(438,0)<<'\n';
-  cv::imwrite("imgYagiz.png",imgYagizOut);
+  //ofsRef439x0<<"y: 0, x: 439 "<<imgYagizOut.at<cv::Vec3b>(0,439)<<'\n';
+  //ofsRef439x0<<"y: 439, x: 0 "<<imgYagizOut.at<cv::Vec3b>(439,0)<<'\n';
+  //ofsRef439x0<<"y: 0, x: 438 "<<imgYagizOut.at<cv::Vec3b>(0,438)<<'\n';
+  //ofsRef439x0<<"y: 438, x: 0 "<<imgYagizOut.at<cv::Vec3b>(438,0)<<'\n';
+  //cv::imwrite("imgYagiz.png",imgYagizOut);
 
   return 0;
 }

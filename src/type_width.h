@@ -1,5 +1,5 @@
-#ifndef TYPE_WIDTH_H_INCLUDE_GUARD
-#define TYPE_WIDTH_H_INCLUDE_GUARD
+#ifndef TYPE_WIDTH_H_INCLUDE_GUARD_
+#define TYPE_WIDTH_H_INCLUDE_GUARD_
 
 template<typename T_>
 struct Type_Width

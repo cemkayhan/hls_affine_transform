@@ -1,5 +1,5 @@
-#if !defined(DIV_CEIL_H_INCLUDE_GUARD)
-#define DIV_CEIL_H_INCLUDE_GUARD
+#ifndef DIV_CEIL_H_INCLUDE_GUARD_
+#define DIV_CEIL_H_INCLUDE_GUARD_
 
 template<int M_,int N_>
 struct Div_Ceil

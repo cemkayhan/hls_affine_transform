@@ -1,5 +1,5 @@
-#ifndef BIT_WIDTH_H_INCLUDE_GUARD
-#define BIT_WIDTH_H_INCLUDE_GUARD
+#ifndef BIT_WIDTH_H_INCLUDE_GUARD_
+#define BIT_WIDTH_H_INCLUDE_GUARD_
 
 template<int N_>
 struct Bit_Width

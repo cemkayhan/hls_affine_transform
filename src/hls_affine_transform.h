@@ -12,6 +12,7 @@
 #include "bit_width.h"
 #include "type_width.h"
 #include "fpt_func.h"
+#include "floor_func.h"
 
 #include <assert.h>
 
