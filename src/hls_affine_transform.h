@@ -4,6 +4,7 @@
 #include "ap_int.h"
 #include "ap_axi_sdata.h"
 #include "hls_stream.h"
+#include "hls_math.h"
 #include "axi_vid_bus_width.h"
 #include "utils/x_hls_utils.h"
 

@@ -30,8 +30,8 @@ void yagizGolden(const cv::Mat& src, cv::Mat& dst, const cv::Mat& M, cv::Size ds
 
 // GOLDEN
 cv::Mat goldenGetRotationMatrix2D(cv::Point2f center, float angle, float scale) {
-    float alpha = scale * cos(angle * CV_PI / 180.0);
-    float beta = scale * sin(angle * CV_PI / 180.0);
+    float alpha = scale * hls::cosf(angle * CV_PI / 180.0);
+    float beta = scale * hls::sinf(angle * CV_PI / 180.0);
 
     cv::Mat rot_mat = cv::Mat(2, 3, CV_64F); //2x3 matrix oluşturuyoruz
     rot_mat.at<float>(0, 0) = alpha;
@@ -193,7 +193,7 @@ int main()
   }
 #endif
 
-  const std::string rotatedImageGoldenStr {"golden_"+std::to_string(goldenangle)+".jpg"};
+  const std::string rotatedImageGoldenStr {"golden_"+std::to_string(goldenangle)+".png"};
   cv::imwrite(rotatedImageGoldenStr,imgOut);
 
   // HLS
