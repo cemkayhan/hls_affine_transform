@@ -131,7 +131,6 @@ static void Func1(
 ){
 #pragma HLS INLINE off
 
-  //std::ofstream ofs2 {"topLeftHls.txt"};
   loopRows: for(auto J_=0;J_<Height;J_+=BLOCK_SIZE_){
 #pragma HLS LOOP_TRIPCOUNT min=MAX_ROWS_/BLOCK_SIZE_ max=MAX_ROWS_/BLOCK_SIZE_
 
