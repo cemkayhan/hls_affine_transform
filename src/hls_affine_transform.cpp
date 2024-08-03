@@ -243,7 +243,6 @@ static void Func2(
               assert((index1_>=0 && index1_<(2*BLOCK_SIZE_)) && "out of range error");
               const auto index2_ {(ap_int<16> {srcXStream_(II_*16+15,II_*16)}+tmpTmp2_+COLS_MARGIN_)-(topLeftX_+COLS_MARGIN_)};
               assert((index2_>=0 && index2_<(2*BLOCK_SIZE_)) && "out of range error");
-              ap_uint<Axi_Vid_Bus_Width<CHANNELS_,DEPTH_,1>::Value> tmpPix_;
               srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=tmp_[index1_][index2_];
             } else {
               srcStreamPix_(II_*CHANNELS_*DEPTH_+CHANNELS_*DEPTH_-1,II_*CHANNELS_*DEPTH_)=0x0;
